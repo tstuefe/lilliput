@@ -849,8 +849,13 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
   if (result != nullptr) {
 #ifdef ASSERT
     if (using_class_space() && mdtype == ClassType) {
-      assert(is_in_class_space(result) &&
-             is_aligned(result, CompressedKlassPointers::klass_alignment_in_bytes()), "Sanity");
+      if (Use1088) {
+        assert(is_in_class_space(result) &&
+            is_aligned_non_pow2(result, 1088), "Sanity");
+      } else {
+        assert(is_in_class_space(result) &&
+               is_aligned(result, CompressedKlassPointers::klass_alignment_in_bytes()), "Sanity");
+      }
     } else {
       assert((is_in_class_space(result) || is_in_nonclass_metaspace(result)) &&
              is_aligned(result, Metaspace::min_allocation_alignment_bytes), "Sanity");

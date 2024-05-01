@@ -33,6 +33,11 @@
 #include "utilities/globalDefinitions.hpp"
 
 inline Klass* CompressedKlassPointers::decode_not_null_without_asserts(narrowKlass v, address narrow_base_base, int shift) {
+  /////////
+  if (Use1088) {
+    return (Klass*)narrow_base_base + (v * 1088);
+  }
+  /////////
   return (Klass*)((uintptr_t)narrow_base_base +((uintptr_t)v << shift));
 }
 
@@ -44,6 +49,9 @@ inline Klass* CompressedKlassPointers::decode_not_null(narrowKlass v, address na
 }
 
 inline narrowKlass CompressedKlassPointers::encode_not_null_without_asserts(Klass* k, address narrow_base, int shift) {
+  if (Use1088) {
+    return (narrowKlass)(pointer_delta(k, narrow_base, 1) / 1088);
+  }
   return (narrowKlass)(pointer_delta(k, narrow_base, 1) >> shift);
 }
 
@@ -64,6 +72,7 @@ inline Klass* CompressedKlassPointers::decode_without_asserts(narrowKlass v) {
 }
 
 inline Klass* CompressedKlassPointers::decode_not_null(narrowKlass v) {
+
   DEBUG_ONLY(check_valid_narrow_klass_id(v);)
   return decode_not_null(v, base(), shift());
 }
@@ -84,6 +93,13 @@ inline narrowKlass CompressedKlassPointers::encode(Klass* v) {
 
 #ifdef ASSERT
 inline void CompressedKlassPointers::check_valid_klass(const Klass* k, address base, int shift) {
+  /////////
+  if (Use1088) {
+    assert(is_aligned_non_pow2(k, 1088), "Klass (" PTR_FORMAT ") not properly aligned to %zu",
+           p2i(k), 1088UL);
+    return;
+  }
+  /////////
   const int log_alignment = MAX2(3, shift); // always at least 64-bit aligned
   assert(is_aligned(k, nth_bit(log_alignment)), "Klass (" PTR_FORMAT ") not properly aligned to %zu",
          p2i(k), nth_bit(shift));

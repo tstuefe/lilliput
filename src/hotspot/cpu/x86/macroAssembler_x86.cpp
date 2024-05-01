@@ -5613,6 +5613,19 @@ void  MacroAssembler::decode_heap_oop_not_null(Register dst, Register src) {
 
 void MacroAssembler::encode_klass_not_null(Register r, Register tmp) {
   assert_different_registers(r, tmp);
+
+  if (Use1088) {
+    if (CompressedKlassPointers::base() != nullptr) {
+      mov64(tmp, (int64_t)CompressedKlassPointers::base());
+      subq(r, tmp);
+    }
+    mov64(tmp, 0xf0f0f0f1);
+    imulq(r, tmp);
+    shrq(r, 0x2a);
+    return;
+  }
+
+
   if (CompressedKlassPointers::base() != nullptr) {
     mov64(tmp, (int64_t)CompressedKlassPointers::base());
     subq(r, tmp);
@@ -5639,6 +5652,17 @@ void  MacroAssembler::decode_klass_not_null(Register r, Register tmp) {
   assert_different_registers(r, tmp);
   // Note: it will change flags
   assert(UseCompressedClassPointers, "should only be used for compressed headers");
+
+  if (Use1088) {
+    imulq(tmp, /* src */ r, 1088);
+    movq(r, tmp);
+    if (CompressedKlassPointers::base() != nullptr) {
+      mov64(tmp, (int64_t)CompressedKlassPointers::base());
+      addq(r, tmp);
+    }
+    return;
+  }
+
   // Cannot assert, unverified entry point counts instructions (see .ad file)
   // vtableStubs also counts instructions in pd_code_size_limit.
   // Also do not verify_oop as this is called by verify_oop.
@@ -5651,10 +5675,25 @@ void  MacroAssembler::decode_klass_not_null(Register r, Register tmp) {
   }
 }
 
-void  MacroAssembler::decode_and_move_klass_not_null(Register dst, Register src) {
+void  MacroAssembler::decode_and_move_klass_not_null(Register dst, Register src, Register tmp) {
   assert_different_registers(src, dst);
+  assert_different_registers(src, tmp);
+  assert_different_registers(dst, tmp);
+
   // Note: it will change flags
   assert (UseCompressedClassPointers, "should only be used for compressed headers");
+
+  if (Use1088) {
+    imulq(tmp, src, 1088);
+    if (CompressedKlassPointers::base() != nullptr) {
+      mov64(dst, (int64_t)CompressedKlassPointers::base());
+    } else {
+      xorq(dst, dst);
+    }
+    addq(dst, src);
+    return;
+  }
+
   // Cannot assert, unverified entry point counts instructions (see .ad file)
   // vtableStubs also counts instructions in pd_code_size_limit.
   // Also do not verify_oop as this is called by verify_oop.

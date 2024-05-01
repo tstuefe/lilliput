@@ -296,6 +296,9 @@ reg_class long_rcx_reg(RCX, RCX_H);
 // Singleton class for RDX long register
 reg_class long_rdx_reg(RDX, RDX_H);
 
+// Singleton class for RDX pointer register
+reg_class ptr_rdx_reg(RDX, RDX_H);
+
 // Singleton class for RAX int register
 reg_class int_rax_reg(RAX);
 
@@ -310,6 +313,9 @@ reg_class int_rdx_reg(RDX);
 
 // Singleton class for RDI int register
 reg_class int_rdi_reg(RDI);
+
+// Singleton class for RSI int register
+reg_class int_rsi_reg(RSI);
 
 // Singleton class for instruction pointer
 // reg_class ip_reg(RIP);
@@ -2584,6 +2590,16 @@ operand rsi_RegP()
   interface(REG_INTER);
 %}
 
+operand rsi_RegN()
+%{
+  constraint(ALLOC_IN_RC(int_rsi_reg));
+  match(RegN);
+  match(rRegN);
+
+  format %{ %}
+  interface(REG_INTER);
+%}
+
 operand rbp_RegP()
 %{
   constraint(ALLOC_IN_RC(ptr_rbp_reg));
@@ -2662,6 +2678,16 @@ operand rdx_RegL()
   constraint(ALLOC_IN_RC(long_rdx_reg));
   match(RegL);
   match(rRegL);
+
+  format %{ %}
+  interface(REG_INTER);
+%}
+
+operand rdx_RegP()
+%{
+  constraint(ALLOC_IN_RC(ptr_rdx_reg));
+  match(RegP);
+  match(rRegP);
 
   format %{ %}
   interface(REG_INTER);
@@ -5942,12 +5968,12 @@ instruct encodeKlass_not_null(rRegN dst, rRegP src, rFlagsReg cr) %{
   ins_pipe(ialu_reg_long);
 %}
 
-instruct decodeKlass_not_null(rRegP dst, rRegN src, rFlagsReg cr) %{
+instruct decodeKlass_not_null(rdi_RegP dst, rsi_RegN src, rdx_RegP tmp, rFlagsReg cr) %{
   match(Set dst (DecodeNKlass src));
-  effect(TEMP dst, KILL cr);
+  effect(TEMP dst, KILL tmp, KILL cr);
   format %{ "decode_and_move_klass_not_null $dst,$src" %}
   ins_encode %{
-    __ decode_and_move_klass_not_null($dst$$Register, $src$$Register);
+    __ decode_and_move_klass_not_null($dst$$Register, $src$$Register, $tmp$$Register);
   %}
   ins_pipe(ialu_reg_long);
 %}

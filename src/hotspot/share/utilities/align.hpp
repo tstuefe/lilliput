@@ -60,6 +60,11 @@ constexpr bool is_aligned(T size, A alignment) {
 }
 
 template<typename T, typename A, ENABLE_IF(std::is_integral<T>::value)>
+constexpr bool is_aligned_non_pow2(T size, A alignment) {
+  return size % alignment == 0;
+}
+
+template<typename T, typename A, ENABLE_IF(std::is_integral<T>::value)>
 constexpr T align_down(T size, A alignment) {
   // Convert mask to T before logical_not.  Otherwise, if alignment is unsigned
   // and smaller than T, the result of the logical_not will be zero-extended
@@ -99,6 +104,12 @@ template <typename T, typename A>
 inline bool is_aligned(T* ptr, A alignment) {
   return is_aligned((uintptr_t)ptr, alignment);
 }
+
+template <typename T, typename A>
+inline bool is_aligned_non_pow2(T* ptr, A alignment) {
+  return is_aligned_non_pow2((uintptr_t)ptr, alignment);
+}
+
 
 // Align metaspace objects by rounding up to natural word boundary
 template <typename T>

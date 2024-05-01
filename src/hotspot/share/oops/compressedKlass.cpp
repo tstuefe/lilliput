@@ -64,6 +64,11 @@ void CompressedKlassPointers::pre_initialize() {
     _tiny_cp = 1;
     _narrow_klass_pointer_bits = narrow_klass_pointer_bits_tinycp;
     _max_shift = max_shift_tinycp;
+    ////////
+    if (Use1088) {
+      _max_shift = 6;
+    }
+    ///////////
   } else {
     _tiny_cp = 0;
     _narrow_klass_pointer_bits = narrow_klass_pointer_bits_legacy;
@@ -95,12 +100,14 @@ void CompressedKlassPointers::sanity_check_after_initialization() {
   ASSERT_HERE(_range != (size_t)-1);
 
   const size_t klab = klass_alignment_in_bytes();
-  ASSERT_HERE(klab >= sizeof(uint64_t) && klab <= K);
+  ASSERT_HERE(klab >= sizeof(uint64_t) && (klab <= K || Use1088));
 
   // Check that Klass range is fully engulfed in the encoding range
   ASSERT_HERE(_klass_range_end > _klass_range_start);
 
-  const address encoding_end = _base + nth_bit(narrow_klass_pointer_bits() + _shift);
+  const address encoding_end =
+      Use1088 ? (_base + (nth_bit(narrow_klass_pointer_bits()) * 1088)) :
+      _base + nth_bit(narrow_klass_pointer_bits() + _shift);
   ASSERT_HERE_2(_klass_range_start >= _base && _klass_range_end <= encoding_end,
                 "Resulting encoding range does not fully cover the class range");
 
@@ -115,7 +122,7 @@ void CompressedKlassPointers::sanity_check_after_initialization() {
   ASSERT_HERE(_highest_valid_narrow_klass_id > _lowest_valid_narrow_klass_id);
 
   Klass* k1 = decode_not_null_without_asserts(_lowest_valid_narrow_klass_id, _base, _shift);
-  ASSERT_HERE_2((address)k1 == _klass_range_start + klab, "Not lowest");
+  ASSERT_HERE_2((address)k1 == _klass_range_start + Use1088 ? 1088 : klab, "Not lowest");
   narrowKlass nk1 = encode_not_null_without_asserts(k1, _base, _shift);
   ASSERT_HERE_2(nk1 == _lowest_valid_narrow_klass_id, "not reversible");
 
@@ -137,6 +144,16 @@ void CompressedKlassPointers::sanity_check_after_initialization() {
 
 void CompressedKlassPointers::calc_lowest_highest_narrow_klass_id() {
   // Given a Klass range, calculate lowest and highest narrowKlass.
+
+  /////////
+  if (Use1088) {
+    _lowest_valid_narrow_klass_id = 1;
+    address highest_possible_klass = (address)((p2i(_klass_range_end) - sizeof(Klass) / 1088) * 1088);
+    _highest_valid_narrow_klass_id = ((uintptr_t)(highest_possible_klass - _klass_range_start)) / 1088;
+    return;
+  }
+  ///////
+
   const size_t klab = klass_alignment_in_bytes();
   // Note that 0 is not a valid narrowKlass, and Metaspace prevents us for that reason from allocating at
   // the very start of class space. So the very first valid Klass position is start-of-range + klab.
@@ -223,10 +240,12 @@ void CompressedKlassPointers::initialize(address addr, size_t len) {
 
   if (tiny_classpointer_mode()) {
 
+    if (!Use1088) {
     // This handles the case that we - experimentally - reduce the number of
     // class pointer bits further, such that (shift + num bits) < 32.
     assert(len <= (size_t)nth_bit(narrow_klass_pointer_bits() + max_shift()),
            "klass range size exceeds encoding");
+    }
 
     // In tiny classpointer mode, we don't attempt for zero-based mode.
     // Instead, we set the base to the start of the klass range and then try
@@ -235,17 +254,18 @@ void CompressedKlassPointers::initialize(address addr, size_t len) {
     // a cacheline size.
     _base = addr;
     _range = len;
+    _shift = Use1088 ? 6 : 10;
 
-    if (TinyClassPointerShift != 0) {
-      _shift = TinyClassPointerShift;
-    } else {
-      constexpr int log_cacheline = 6;
-      int s = max_shift();
-      while (s > log_cacheline && ((size_t)nth_bit(narrow_klass_pointer_bits() + s - 1) > len)) {
-        s--;
-      }
-      _shift = s;
-    }
+    //if (TinyClassPointerShift != 0) {
+    //      _shift = TinyClassPointerShift;
+    //    } else {
+    //constexpr int log_cacheline = 6;
+    //      int s = max_shift();
+    //      while (s > log_cacheline && ((size_t)nth_bit(narrow_klass_pointer_bits() + s - 1) > len)) {
+    //s--;
+    //      }
+    //      _shift = s;
+    //}
 
   } else {
 
@@ -284,9 +304,9 @@ void CompressedKlassPointers::initialize(address addr, size_t len) {
 }
 
 void CompressedKlassPointers::print_mode(outputStream* st) {
-  st->print_cr("UseCompressedClassPointers %d, UseCompactObjectHeaders %d, "
+  st->print_cr("UseCompressedClassPointers %d, UseCompactObjectHeaders %d, Use1088 %d"
                "narrow klass pointer bits %d, max shift %d",
-               UseCompressedClassPointers, UseCompactObjectHeaders,
+               UseCompressedClassPointers, UseCompactObjectHeaders, Use1088,
                _narrow_klass_pointer_bits, _max_shift);
   if (_base == (address)-1) {
     st->print_cr("Narrow klass encoding not initialized");

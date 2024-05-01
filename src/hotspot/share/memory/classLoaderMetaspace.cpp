@@ -31,6 +31,7 @@
 #include "memory/metaspace/chunkManager.hpp"
 #include "memory/metaspace/internalStats.hpp"
 #include "memory/metaspace/metablock.hpp"
+#include "memory/metaspace/metablock.inline.hpp"
 #include "memory/metaspace/metaspaceArena.hpp"
 #include "memory/metaspace/metaspaceArenaGrowthPolicy.hpp"
 #include "memory/metaspace/metaspaceCommon.hpp"
@@ -79,6 +80,9 @@ ClassLoaderMetaspace::ClassLoaderMetaspace(Mutex* lock, Metaspace::MetaspaceType
 
   // If needed, initialize class arena
   if (class_context != nullptr) {
+    //////
+    klass_alignment_words = Use1088 ?  Metaspace::min_allocation_alignment_words : klass_alignment_words;
+    //////
     _class_space_arena = new MetaspaceArena(
         class_context,
         ArenaGrowthPolicy::policy_for_space_type(space_type, true),
@@ -104,6 +108,29 @@ MetaWord* ClassLoaderMetaspace::allocate(size_t word_size, Metaspace::MetadataTy
   MutexLocker fcl(lock(), Mutex::_no_safepoint_check_flag);
   MetaBlock result, wastage;
   const bool is_class = have_class_space_arena() && mdType == Metaspace::ClassType;
+
+  //////////
+  if (Use1088) {
+    if (is_class) {
+      // overallocate, align yourself
+      const size_t alignment = 1088;
+      const size_t word_alignment = alignment / BytesPerWord;
+      size_t outer_wordsize = ((word_size / word_alignment) + 1) * word_alignment;
+      MetaBlock outer_result = class_space_arena()->allocate(word_size, wastage);
+      uint64_t pi = p2i(outer_result.base());
+      uint64_t pi2 = ((pi / word_alignment) + 1) * word_alignment;
+      size_t offset_words = (pi2 - pi) / BytesPerWord;
+      size_t tailsize_words = outer_result.word_size() - offset_words;
+      assert(tailsize_words >= word_size, "Sanity");
+      assert(tailsize_words <= outer_result.word_size(), "Sanit");
+      result = outer_result.split_off_tail(tailsize_words);
+      assert(is_aligned_non_pow2(outer_result.base(), 1088), "sanity");
+      log_trace(metaspace)("Real Klass allocation at " METABLOCKFORMAT, METABLOCKFORMATARGS(result));
+      return result.base();
+    }
+  }
+  /////////
+
   if (is_class) {
     assert(word_size >= (sizeof(Klass)/BytesPerWord), "weird size for klass: %zu", word_size);
     result = class_space_arena()->allocate(word_size, wastage);
