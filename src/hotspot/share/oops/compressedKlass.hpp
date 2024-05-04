@@ -179,9 +179,9 @@ public:
 
 #ifdef ASSERT
   // Given a Klass* k and an encoding (base, shift), check that k can be encoded
-  inline static void check_valid_klass(const Klass* k, address base, int shift);
+  inline static void check_valid_klass_location(const void* k, address base, int shift);
   // Given a Klass* k, check that k can be encoded with the current encoding
-  inline static void check_valid_klass(const Klass* k);
+  inline static void check_valid_klass_location(const void* k);
   // Given a narrow Klass ID, check that it is valid according to current encoding
   inline static void check_valid_narrow_klass_id(narrowKlass nk);
 #endif

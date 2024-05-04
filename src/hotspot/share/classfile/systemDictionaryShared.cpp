@@ -425,7 +425,7 @@ InstanceKlass* SystemDictionaryShared::find_or_load_shared_class(
 
 #ifdef ASSERT
     if (UseCompressedClassPointers && k != nullptr) {
-      CompressedKlassPointers::check_valid_klass(k);
+      CompressedKlassPointers::check_valid_klass_location(k);
     }
 #endif
 
@@ -1340,7 +1340,7 @@ InstanceKlass* SystemDictionaryShared::find_builtin_class(Symbol* name) {
     assert(!record->_klass->is_hidden(), "hidden class cannot be looked up by name");
 #ifdef _LP64
     if (UseCompressedClassPointers) {
-      DEBUG_ONLY(CompressedKlassPointers::check_valid_klass(record->_klass);)
+      DEBUG_ONLY(CompressedKlassPointers::check_valid_klass_location(record->_klass);)
     }
 #endif
     // We did not save the classfile data of the generated LambdaForm invoker classes,

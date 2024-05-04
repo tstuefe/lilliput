@@ -53,6 +53,7 @@
 #include "runtime/safepointMechanism.hpp"
 #include "runtime/sharedRuntime.hpp"
 #include "runtime/stubRoutines.hpp"
+#include "utilities/align.hpp"
 #include "utilities/checkedCast.hpp"
 #include "utilities/macros.hpp"
 
@@ -5614,14 +5615,14 @@ void  MacroAssembler::decode_heap_oop_not_null(Register dst, Register src) {
 void MacroAssembler::encode_klass_not_null(Register r, Register tmp) {
   assert_different_registers(r, tmp);
 
-  if (Use1088) {
+  if (Use2c0) {
     if (CompressedKlassPointers::base() != nullptr) {
       mov64(tmp, (int64_t)CompressedKlassPointers::base());
       subq(r, tmp);
     }
-    mov64(tmp, 0xf0f0f0f1);
+    mov64(tmp, 0xba2e8ba3);
     imulq(r, tmp);
-    shrq(r, 0x2a);
+    shrq(r, 0x29);
     return;
   }
 
@@ -5635,7 +5636,19 @@ void MacroAssembler::encode_klass_not_null(Register r, Register tmp) {
   }
 }
 
-void MacroAssembler::encode_and_move_klass_not_null(Register dst, Register src) {
+void MacroAssembler::encode_and_move_klass_not_null(Register dst, Register src, Register tmp) {
+
+  if (Use2c0) {
+    if (CompressedKlassPointers::base() != nullptr) {
+      mov64(dst, (int64_t)CompressedKlassPointers::base());
+      subq(dst, src);
+    }
+    mov64(tmp, 0xba2e8ba3);
+    imulq(dst, tmp);
+    shrq(dst, 0x29);
+    return;
+  }
+
   assert_different_registers(src, dst);
   if (CompressedKlassPointers::base() != nullptr) {
     mov64(dst, -(int64_t)CompressedKlassPointers::base());
@@ -5653,8 +5666,8 @@ void  MacroAssembler::decode_klass_not_null(Register r, Register tmp) {
   // Note: it will change flags
   assert(UseCompressedClassPointers, "should only be used for compressed headers");
 
-  if (Use1088) {
-    imulq(tmp, /* src */ r, 1088);
+  if (Use2c0) {
+    imulq(tmp, /* src */ r, ALIGN_2c0);
     movq(r, tmp);
     if (CompressedKlassPointers::base() != nullptr) {
       mov64(tmp, (int64_t)CompressedKlassPointers::base());
@@ -5683,8 +5696,8 @@ void  MacroAssembler::decode_and_move_klass_not_null(Register dst, Register src,
   // Note: it will change flags
   assert (UseCompressedClassPointers, "should only be used for compressed headers");
 
-  if (Use1088) {
-    imulq(tmp, src, 1088);
+  if (Use2c0) {
+    imulq(tmp, src, ALIGN_2c0);
     if (CompressedKlassPointers::base() != nullptr) {
       mov64(dst, (int64_t)CompressedKlassPointers::base());
     } else {

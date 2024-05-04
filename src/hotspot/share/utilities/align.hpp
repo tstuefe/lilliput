@@ -60,11 +60,6 @@ constexpr bool is_aligned(T size, A alignment) {
 }
 
 template<typename T, typename A, ENABLE_IF(std::is_integral<T>::value)>
-constexpr bool is_aligned_non_pow2(T size, A alignment) {
-  return size % alignment == 0;
-}
-
-template<typename T, typename A, ENABLE_IF(std::is_integral<T>::value)>
 constexpr T align_down(T size, A alignment) {
   // Convert mask to T before logical_not.  Otherwise, if alignment is unsigned
   // and smaller than T, the result of the logical_not will be zero-extended
@@ -105,9 +100,38 @@ inline bool is_aligned(T* ptr, A alignment) {
   return is_aligned((uintptr_t)ptr, alignment);
 }
 
-template <typename T, typename A>
-inline bool is_aligned_non_pow2(T* ptr, A alignment) {
-  return is_aligned_non_pow2((uintptr_t)ptr, alignment);
+constexpr unsigned ALIGN_2c0 = 0x2c0;
+
+template<typename T>
+constexpr bool is_aligned_2c0(T size) {
+  return ((size / ALIGN_2c0) * ALIGN_2c0) == size;
+}
+
+template<typename T>
+constexpr T align_down_2c0(T size) {
+  T result = T((size / ALIGN_2c0) * ALIGN_2c0);
+  assert(result <= size, "Sanity");
+  assert(is_aligned_2c0(result),
+         "must be aligned: " UINT64_FORMAT, (uint64_t)result);
+  return result;
+}
+
+template<typename T>
+constexpr T align_up_2c0(T size) {
+  T result = T( ((size + (ALIGN_2c0 - 1)) / ALIGN_2c0) * ALIGN_2c0);
+  assert(result >= size, "Sanity");
+  assert(result < size + ALIGN_2c0, "Sanity");
+  assert(is_aligned_2c0(result),
+         "must be aligned: " UINT64_FORMAT, (uint64_t)result);
+  return result;
+}
+
+// return next aligned pointer based on given base
+constexpr address align_up_2c0_pointer_with_base(address base, address p) {
+  assert(p >= base, "sanity");
+  const size_t off = p - base;
+  const size_t off_aligned = align_up_2c0(off);
+  return base + off_aligned;
 }
 
 

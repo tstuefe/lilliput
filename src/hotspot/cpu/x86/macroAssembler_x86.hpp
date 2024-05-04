@@ -417,7 +417,7 @@ class MacroAssembler: public Assembler {
 
   void encode_klass_not_null(Register r, Register tmp);
   void decode_klass_not_null(Register r, Register tmp);
-  void encode_and_move_klass_not_null(Register dst, Register src);
+  void encode_and_move_klass_not_null(Register dst, Register src, Register tmp);
   void decode_and_move_klass_not_null(Register dst, Register src,  Register tmp);
   void set_narrow_klass(Register dst, Klass* k);
   void set_narrow_klass(Address dst, Klass* k);
