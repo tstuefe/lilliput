@@ -73,6 +73,11 @@ void CompressedKlassPointers::pre_initialize() {
 
 #ifdef ASSERT
 void CompressedKlassPointers::sanity_check_after_initialization() {
+
+  if (UseKlassTable) {
+    return;
+  }
+
   // In expectation of an assert, prepare condensed info to be printed with the assert.
   char tmp[256];
   os::snprintf(tmp, sizeof(tmp), PTR_FORMAT " " PTR_FORMAT " " PTR_FORMAT " %d " SIZE_FORMAT " %u %u",
@@ -229,7 +234,7 @@ void CompressedKlassPointers::initialize(address addr, size_t len) {
     // a cacheline size.
     _base = addr;
     _range = len;
-
+    constexpr bool TinyClassPointerShift = 0;
     if (TinyClassPointerShift != 0) {
       _shift = TinyClassPointerShift;
     } else {
@@ -278,9 +283,9 @@ void CompressedKlassPointers::initialize(address addr, size_t len) {
 }
 
 void CompressedKlassPointers::print_mode(outputStream* st) {
-  st->print_cr("UseCompressedClassPointers %d, UseCompactObjectHeaders %d, "
+  st->print_cr("UseCompressedClassPointers %d, UseCompactObjectHeaders %d, UseKlassTable %d, "
                "narrow klass pointer bits %d, max shift %d",
-               UseCompressedClassPointers, UseCompactObjectHeaders,
+               UseCompressedClassPointers, UseCompactObjectHeaders, UseKlassTable,
                _narrow_klass_pointer_bits, _max_shift);
   if (_base == (address)-1) {
     st->print_cr("Narrow klass encoding not initialized");

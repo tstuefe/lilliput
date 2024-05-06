@@ -33,6 +33,11 @@
 #include "utilities/globalDefinitions.hpp"
 
 inline Klass* CompressedKlassPointers::decode_not_null_without_asserts(narrowKlass v, address narrow_base_base, int shift) {
+
+  if (UseKlassTable) {
+    return theKlassTable.get_klass_pointer(v);
+  }
+
   return (Klass*)((uintptr_t)narrow_base_base +((uintptr_t)v << shift));
 }
 
@@ -44,6 +49,11 @@ inline Klass* CompressedKlassPointers::decode_not_null(narrowKlass v, address na
 }
 
 inline narrowKlass CompressedKlassPointers::encode_not_null_without_asserts(Klass* k, address narrow_base, int shift) {
+
+  if (UseKlassTable) {
+    return k->narrowKlass();
+  }
+
   return (narrowKlass)(pointer_delta(k, narrow_base, 1) >> shift);
 }
 
@@ -51,7 +61,7 @@ inline narrowKlass CompressedKlassPointers::encode_not_null(Klass* v, address na
   assert(!is_null(v), "klass value can never be zero");
   DEBUG_ONLY(check_valid_klass(v);)
   narrowKlass result = encode_not_null_without_asserts(v, narrow_base, shift);
-  assert(decode_not_null((narrowKlass)result, narrow_base, shift) == v, "reversibility");
+  assert(!UseKlassTable ||decode_not_null((narrowKlass)result, narrow_base, shift) == v, "reversibility");
   return result;
 }
 
@@ -84,6 +94,11 @@ inline narrowKlass CompressedKlassPointers::encode(Klass* v) {
 
 #ifdef ASSERT
 inline void CompressedKlassPointers::check_valid_klass(const Klass* k, address base, int shift) {
+
+  if (UseKlassTable) {
+    return;
+  }
+
   const int log_alignment = MAX2(3, shift); // always at least 64-bit aligned
   assert(is_aligned(k, nth_bit(log_alignment)), "Klass (" PTR_FORMAT ") not properly aligned to %zu",
          p2i(k), nth_bit(shift));
@@ -94,6 +109,11 @@ inline void CompressedKlassPointers::check_valid_klass(const Klass* k, address b
 }
 
 inline void CompressedKlassPointers::check_valid_klass(const Klass* k) {
+
+  if (UseKlassTable) {
+    return;
+  }
+
   assert(UseCompressedClassPointers, "Only call for +UseCCP");
   check_valid_klass(k, base(), shift());
   // Also assert that k falls into what we know is the valid Klass range. This is usually smaller
@@ -105,6 +125,11 @@ inline void CompressedKlassPointers::check_valid_klass(const Klass* k) {
       p2i(k), p2i(base()), p2i(klassrange_end));
 }
 inline void CompressedKlassPointers::check_valid_narrow_klass_id(narrowKlass nk) {
+
+  if (UseKlassTable) {
+    return;
+  }
+
   assert(UseCompressedClassPointers, "Only call for +UseCCP");
   const uint64_t nk_mask = ~right_n_bits(narrow_klass_pointer_bits());
   assert(((uint64_t)nk & nk_mask) == 0, "narrow klass id bit spillover (%u)", nk);

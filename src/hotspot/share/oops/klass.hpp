@@ -384,7 +384,25 @@ protected:
   void     set_subklass(Klass* s);
   void     set_next_sibling(Klass* s);
 
+
+ private:
+  uint32_t _nk;
+  void setNarrowKlass(uint32_t nk) {
+    assert(_nk == 0, "only once");
+    _nk = nk;
+  }
  public:
+  uint32_t narrowKlass() const {
+    assert(_nk > 0, "only after init");
+    return _nk;
+  }
+  void initializeNarrowKlass();
+
+  static ByteSize narrowKlassOffset() { return byte_offset_of(Klass, _nk); }
+
+ public:
+
+
 
   // Compiler support
   static ByteSize super_offset()                 { return byte_offset_of(Klass, _super); }
@@ -735,5 +753,30 @@ protected:
   // for error reporting
   static bool is_valid(Klass* k);
 };
+
+class KlassTable {
+  static constexpr unsigned _cap = M;
+  volatile uint32_t _last;
+  Klass* _values[_cap];
+public:
+  KlassTable();
+  uint32_t allocate_slot();
+
+  Klass** table_start() { return _values; }
+
+  Klass* get_klass_pointer(uint32_t slot) const {
+    assert(slot > 0 && slot < _cap, "sanity");
+    assert(_values[slot] != nullptr, "not set");
+    return _values[slot];
+  }
+
+  void store_klass_pointer(uint32_t slot, Klass* k) {
+    assert(slot > 0 && slot < _cap, "sanity");
+    _values[slot] = k;
+  }
+
+};
+
+extern KlassTable theKlassTable;
 
 #endif // SHARE_OOPS_KLASS_HPP
