@@ -202,7 +202,7 @@ static markWord make_prototype(Klass* kls) {
 }
 
 Klass::Klass() : _kind(UnknownKlassKind) {
-  assert(!UseKlassTable, "eee");
+  //assert(!UseKlassTable, "eee");
   assert(CDSConfig::is_dumping_static_archive() || UseSharedSpaces, "only for cds");
 
 
@@ -228,9 +228,6 @@ Klass::Klass(KlassKind kind) : _kind(kind),
 
   _primary_supers[0] = this;
   set_super_check_offset(in_bytes(primary_supers_offset()));
-
-  _nk = 0;
-
 }
 
 jint Klass::array_layout_helper(BasicType etype) {
@@ -1013,7 +1010,10 @@ uint32_t KlassTable::allocate_slot() {
 void Klass::initializeNarrowKlass() {
   uint32_t nk = theKlassTable.allocate_slot();
   theKlassTable.store_klass_pointer(nk, this);
-  setNarrowKlass(theKlassTable.allocate_slot());
+
+//tty->print_cr("Thread* %p Klass* %p nk %u", Thread::current(), this, nk);
+
+  setNarrowKlass(nk);
 }
 
 KlassTable theKlassTable;

@@ -452,18 +452,23 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(const ClassFileParser& par
   if (parser.is_instance_ref_klass()) {
     // java.lang.ref.Reference
     ik = new (loader_data, size, THREAD) InstanceRefKlass(parser);
+    assert(!UseKlassTable || ik->narrowKlass() > 0, "Sanity");
   } else if (class_name == vmSymbols::java_lang_Class()) {
     // mirror - java.lang.Class
     ik = new (loader_data, size, THREAD) InstanceMirrorKlass(parser);
+    assert(!UseKlassTable || ik->narrowKlass() > 0, "Sanity");
   } else if (is_stack_chunk_class(class_name, loader_data)) {
     // stack chunk
     ik = new (loader_data, size, THREAD) InstanceStackChunkKlass(parser);
+    assert(!UseKlassTable || ik->narrowKlass() > 0, "Sanity");
   } else if (is_class_loader(class_name, parser)) {
     // class loader - java.lang.ClassLoader
     ik = new (loader_data, size, THREAD) InstanceClassLoaderKlass(parser);
+    assert(!UseKlassTable || ik->narrowKlass() > 0, "Sanity");
   } else {
     // normal
     ik = new (loader_data, size, THREAD) InstanceKlass(parser);
+    assert(!UseKlassTable || ik->narrowKlass() > 0, "Sanity");
   }
 
   // Check for pending exception before adding to the loader data and incrementing

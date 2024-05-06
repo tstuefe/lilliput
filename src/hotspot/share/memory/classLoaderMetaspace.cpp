@@ -42,6 +42,7 @@
 #include "oops/klass.hpp"
 #include "runtime/mutexLocker.hpp"
 #include "utilities/debug.hpp"
+#include "utilities/nativeCallStack.hpp"
 
 using metaspace::ChunkManager;
 using metaspace::MetaBlock;
@@ -130,6 +131,13 @@ if (UseKlassTable) {
 }
   }
 #endif
+//
+//  if (UseKlassTable && is_class) {
+//    tty->print_cr("Thread* %p Alloc Klass: %p", Thread::current(), result.base() );
+//    NativeCallStack st(3);
+//    st.print_on(tty);
+//  }
+
   return result.base();
 }
 

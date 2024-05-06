@@ -393,7 +393,7 @@ protected:
   }
  public:
   uint32_t narrowKlass() const {
-    assert(_nk > 0, "only after init");
+    assert(_nk > 0, "only after init (Klass* %p)", this);
     return _nk;
   }
   void initializeNarrowKlass();

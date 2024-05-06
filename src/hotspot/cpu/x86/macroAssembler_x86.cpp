@@ -5615,7 +5615,10 @@ void MacroAssembler::encode_klass_not_null(Register r, Register tmp) {
   assert_different_registers(r, tmp);
 
   if (UseKlassTable) {
-    movw(r, Address(r, Klass::narrowKlassOffset()));
+
+//emit_int8((unsigned char)0xCC);
+
+    movl(r, Address(r, Klass::narrowKlassOffset()));
     return;
   }
 
@@ -5630,9 +5633,9 @@ void MacroAssembler::encode_klass_not_null(Register r, Register tmp) {
 
 void MacroAssembler::encode_and_move_klass_not_null(Register dst, Register src) {
   assert_different_registers(src, dst);
-
+ //emit_int8((unsigned char)0xCC);
   if (UseKlassTable) {
-    movw(dst, Address(src, Klass::narrowKlassOffset()));
+    movl(dst, Address(src, Klass::narrowKlassOffset()));
     return;
   }
 
@@ -5651,6 +5654,9 @@ void  MacroAssembler::decode_klass_not_null(Register r, Register tmp) {
   assert_different_registers(r, tmp);
 
   if (UseKlassTable) {
+
+//emit_int8((unsigned char)0xCC);
+
     shlq(r, 3);
     mov64(tmp, (int64_t)theKlassTable.table_start());
     addq(r, tmp);
@@ -5679,11 +5685,15 @@ void  MacroAssembler::decode_and_move_klass_not_null(Register dst, Register src)
   assert (UseCompressedClassPointers, "should only be used for compressed headers");
 
   if (UseKlassTable) {
+
+//emit_int8((unsigned char)0xCC);
+
     shlq(src, 3); // need to revert!
     mov64(dst, (int64_t)theKlassTable.table_start());
     addq(dst, src);
     movq(dst, Address(dst, 0));
     shrq(src, 3); // restore
+
     return;
   }
 

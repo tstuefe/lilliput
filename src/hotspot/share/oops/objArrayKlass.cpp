@@ -103,11 +103,6 @@ ObjArrayKlass* ObjArrayKlass::allocate_objArray_klass(ClassLoaderData* loader_da
   // Initialize instance variables
   ObjArrayKlass* oak = ObjArrayKlass::allocate(loader_data, n, element_klass, name, CHECK_NULL);
 
-  if (UseKlassTable) {
-    oak->initializeNarrowKlass();
-  }
-
-
   ModuleEntry* module = oak->module();
   assert(module != nullptr, "No module entry for array");
 
