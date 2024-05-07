@@ -149,7 +149,7 @@ MetaWord* ClassLoaderMetaspace::allocate(size_t word_size, Metaspace::MetadataTy
         }
       }
       if (aligned != nullptr) {
-      log_info(metaspace)("(class arena) returning future Klass %p (%X) - nKlassID would be %x",
+      log_debug(metaspace)("(class arena) returning future Klass %p (%X) - nKlassID would be %x",
           aligned,  ( (unsigned)(((uintptr_t)aligned) >> 6) ), CompressedKlassPointers::encode_not_null_without_asserts(
           (Klass*)aligned,     CompressedKlassPointers::base(), CompressedKlassPointers::shift()
           )   );
