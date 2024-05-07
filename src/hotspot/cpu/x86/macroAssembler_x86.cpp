@@ -5616,6 +5616,7 @@ void MacroAssembler::encode_klass_not_null(Register r, Register tmp) {
   assert_different_registers(r, tmp);
 
   if (Use2c0) {
+//    emit_int8((unsigned char)0xCC);  nop();nop();
     if (CompressedKlassPointers::base() != nullptr) {
       mov64(tmp, (int64_t)CompressedKlassPointers::base());
       subq(r, tmp);
@@ -5637,11 +5638,14 @@ void MacroAssembler::encode_klass_not_null(Register r, Register tmp) {
 }
 
 void MacroAssembler::encode_and_move_klass_not_null(Register dst, Register src, Register tmp) {
+  assert_different_registers(dst, src, tmp);
 
   if (Use2c0) {
+//    emit_int8((unsigned char)0xCC);  nop();nop();nop();nop();
+    mov(dst, src);
     if (CompressedKlassPointers::base() != nullptr) {
-      mov64(dst, (int64_t)CompressedKlassPointers::base());
-      subq(dst, src);
+      mov64(tmp, (int64_t)CompressedKlassPointers::base());
+      subq(dst, tmp);
     }
     mov64(tmp, 0xba2e8ba3);
     imulq(dst, tmp);
@@ -5667,6 +5671,7 @@ void  MacroAssembler::decode_klass_not_null(Register r, Register tmp) {
   assert(UseCompressedClassPointers, "should only be used for compressed headers");
 
   if (Use2c0) {
+//    emit_int8((unsigned char)0xCC);  nop();nop();
     imulq(tmp, /* src */ r, ALIGN_2c0);
     movq(r, tmp);
     if (CompressedKlassPointers::base() != nullptr) {
@@ -5697,13 +5702,14 @@ void  MacroAssembler::decode_and_move_klass_not_null(Register dst, Register src,
   assert (UseCompressedClassPointers, "should only be used for compressed headers");
 
   if (Use2c0) {
+//  emit_int8((unsigned char)0xCC); nop()
     imulq(tmp, src, ALIGN_2c0);
     if (CompressedKlassPointers::base() != nullptr) {
       mov64(dst, (int64_t)CompressedKlassPointers::base());
     } else {
       xorq(dst, dst);
     }
-    addq(dst, src);
+    addq(dst, tmp);
     return;
   }
 

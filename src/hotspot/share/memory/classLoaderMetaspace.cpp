@@ -40,6 +40,7 @@
 #include "memory/metaspace/metaspaceStatistics.hpp"
 #include "memory/metaspace/runningCounters.hpp"
 #include "memory/metaspaceTracer.hpp"
+#include "oops/compressedKlass.inline.hpp"
 #include "oops/klass.hpp"
 #include "runtime/mutexLocker.hpp"
 #include "utilities/debug.hpp"
@@ -147,7 +148,12 @@ MetaWord* ClassLoaderMetaspace::allocate(size_t word_size, Metaspace::MetadataTy
           }
         }
       }
-      log_trace(metaspace)("(class arena) returning future Klass %p (%X)", aligned,  ( (unsigned)(((uintptr_t)aligned) >> 6) )   );
+      if (aligned != nullptr) {
+      log_info(metaspace)("(class arena) returning future Klass %p (%X) - nKlassID would be %x",
+          aligned,  ( (unsigned)(((uintptr_t)aligned) >> 6) ), CompressedKlassPointers::encode_not_null_without_asserts(
+          (Klass*)aligned,     CompressedKlassPointers::base(), CompressedKlassPointers::shift()
+          )   );
+      }
       return (MetaWord*)aligned;
     }
   }

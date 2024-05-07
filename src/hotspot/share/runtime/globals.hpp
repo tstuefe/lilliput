@@ -131,7 +131,7 @@ const size_t minimumSymbolTableSize = 1024;
   product(bool, UseCompactObjectHeaders, false, EXPERIMENTAL,               \
           "Use compact 64-bit object headers in 64-bit VM")                 \
                                                                             \
-  product(bool, Use2c0, false, "")                                          \
+  develop(bool, Use2c0, true, "")                                          \
   develop(int, TinyClassPointerShift, 0, "")                                \
                                                                             \
   product(int, ObjectAlignmentInBytes, 8,                                   \

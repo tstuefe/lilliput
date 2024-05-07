@@ -5958,9 +5958,9 @@ instruct decodeHeapOop_not_null(rRegP dst, rRegN src, rFlagsReg cr) %{
   ins_pipe(ialu_reg_long);
 %}
 
-instruct encodeKlass_not_null(rsi_RegN dst, rdi_RegP src, rdx_RegP tmp, rFlagsReg cr) %{
+instruct encodeKlass_not_null(rRegN dst, rRegP src, rRegP tmp, rFlagsReg cr) %{
   match(Set dst (EncodePKlass src));
-  effect(TEMP dst, KILL tmp, KILL cr);
+  effect(TEMP_DEF dst, USE src, TEMP tmp, KILL cr);
   format %{ "encode_and_move_klass_not_null $dst,$src,$tmp" %}
   ins_encode %{
     __ encode_and_move_klass_not_null($dst$$Register, $src$$Register, $tmp$$Register);
@@ -5968,9 +5968,9 @@ instruct encodeKlass_not_null(rsi_RegN dst, rdi_RegP src, rdx_RegP tmp, rFlagsRe
   ins_pipe(ialu_reg_long);
 %}
 
-instruct decodeKlass_not_null(rdi_RegP dst, rsi_RegN src, rdx_RegP tmp, rFlagsReg cr) %{
+instruct decodeKlass_not_null(rRegP dst, rRegN src, rRegP tmp, rFlagsReg cr) %{
   match(Set dst (DecodeNKlass src));
-  effect(TEMP dst, KILL tmp, KILL cr);
+  effect(TEMP_DEF dst, USE src, TEMP tmp, KILL cr);
   format %{ "decode_and_move_klass_not_null $dst,$src,$tmp" %}
   ins_encode %{
     __ decode_and_move_klass_not_null($dst$$Register, $src$$Register, $tmp$$Register);
