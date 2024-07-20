@@ -88,9 +88,57 @@ STATS_DO(XX)
 void KlassInfoLUT::print_statistics(outputStream* st) {
   assert(UseKLUT, "?");
   st->print_cr("KLUT stats:");
-#define XX(xx) st->print_cr("   " #xx ":" UINT64_FORMAT ", ", counter_##xx);
+#define XX(xx)                                \
+  st->print("   " #xx ":");                   \
+  st->fill_to(22);                            \
+  st->print_cr(UINT64_FORMAT, counter_##xx);
 STATS_DO(XX)
 #undef XX
+  const uint64_t hits =
+#define XX(name, shortname) counter_hits_##shortname +
+ALL_KLASS_KINDS_DO(XX)
+#undef XX
+   0;
+#define PERCENTAGE_OF(x, x100) ( ((double)x * 100.0f) / x100 )
+const uint64_t hits_ak = counter_hits_OAK + counter_hits_TAK;
+  const uint64_t hits_ik = hits - hits_ak;
+  const uint64_t no_info_hits = counter_noinfo_ICLK + counter_noinfo_IMK + counter_noinfo_IK_other;
+  st->print("   IK hits total: ");
+  st->fill_to(22);
+  st->print_cr(UINT64_FORMAT " (%.1f%%)", hits_ik, PERCENTAGE_OF(hits_ik, hits));
+  st->print("   AK hits total: ");
+  st->fill_to(22);
+  st->print_cr(UINT64_FORMAT " (%.1f%%)", hits_ak, PERCENTAGE_OF(hits_ak, hits));
+  st->print_cr("   IK details missing in %.2f%% of all IK hits (IMK: %.2f%%, ICLK: %.2f%%, other: %.2f%%)",
+               PERCENTAGE_OF(no_info_hits, hits_ik),
+               PERCENTAGE_OF(counter_noinfo_IMK, hits_ik),
+               PERCENTAGE_OF(counter_noinfo_ICLK, hits_ik),
+               PERCENTAGE_OF(counter_noinfo_IK_other, hits_ik)
+  );
 }
+
+#ifdef KLUT_ENABLE_EXPENSIVE_STATS
+void KlassInfoLUT::update_hit_stats(KlassLUTEntry klute) {
+  switch (klute.kind()) {
+#define XX(name, shortname) case Klass::name ## Kind: inc_hits_ ## shortname(); break;
+  ALL_KLASS_KINDS_DO(XX)
+#undef XX
+  default: ShouldNotReachHere();
+  };
+  if (klute.is_instance() && !klute.ik_carries_infos()) {
+    switch (klute.kind()) {
+      case Klass::InstanceClassLoaderKlassKind: inc_noinfo_ICLK(); break;
+      case Klass::InstanceMirrorKlassKind: inc_noinfo_IMK(); break;
+      default: inc_noinfo_IK_other(); break;
+    }
+  }
+}
+#endif // KLUT_ENABLE_EXPENSIVE_STATS
+
+#ifdef KLUT_ENABLE_EXPENSIVE_LOG
+void KlassInfoLUT::log_hit(KlassLUTEntry klute) {
+  //log_debug(klut)("retrieval: klute: name: %s kind: %d", k->name()->as_C_string(), k->kind());
+}
+#endif
 
 #endif // ASSERT
