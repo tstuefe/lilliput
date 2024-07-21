@@ -296,7 +296,7 @@ bool oopDesc::is_typeArray() const {
 }
 
 template<typename T>
-T*       oopDesc::field_addr(int offset)     const { return reinterpret_cast<T*>(cast_from_oop<intptr_t>(as_oop()) + offset); }
+T*       oopDesc::field_addr(int offset_bytes)     const { return reinterpret_cast<T*>(cast_from_oop<intptr_t>(as_oop()) + offset_bytes); }
 
 template <typename T>
 size_t   oopDesc::field_offset(T* p) const { return pointer_delta((void*)p, (void*)this, 1); }
