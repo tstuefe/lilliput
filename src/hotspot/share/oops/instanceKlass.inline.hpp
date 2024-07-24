@@ -205,17 +205,38 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_bounded(oop obj, OopClosureType
   oop_oop_iterate_oop_maps_bounded<T>(obj, closure, mr);
 }
 
+template <typename T, class OopClosureType>
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_over_klute_oop_maps(KlassLUTEntry klute, OopClosureType* closure, oop obj) {
+  assert(klute.ik_carries_infos(), "Sanity");
+  if (klute.ik_omb_count_1() > 0) {
+    oop_oop_iterate_oop_map<T>(klute.ik_omb_offset_1() * sizeof(T), klute.ik_omb_count_1(), obj, closure);
+    if (klute.ik_omb_count_2() > 0) {
+      oop_oop_iterate_oop_map<T>(klute.ik_omb_offset_2() * sizeof(T), klute.ik_omb_count_2(), obj, closure);
+    }
+  }
+}
+
+template <typename T, class OopClosureType>
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_over_klute_oop_maps_reverse(KlassLUTEntry klute, OopClosureType* closure, oop obj) {
+  assert(klute.ik_carries_infos(), "Sanity");
+  if (klute.ik_omb_count_1() > 0) {
+    if (klute.ik_omb_count_2() > 0) {
+      oop_oop_iterate_oop_map_reverse<T>(klute.ik_omb_offset_2() * sizeof(T), klute.ik_omb_count_2(), obj, closure);
+    }
+    oop_oop_iterate_oop_map_reverse<T>(klute.ik_omb_offset_1() * sizeof(T), klute.ik_omb_count_1(), obj, closure);
+  }
+}
+
 // oop iteration via klute
 // Iterate over all oop fields and metadata.
 template <typename T, class OopClosureType>
 ALWAYSINLINE void InstanceKlass::oop_oop_iterate(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj) {
   if (Devirtualizer::do_metadata(closure)) {
-    // will be improved
-    Devirtualizer::do_narrow_klass(closure, nk);
+    Devirtualizer::do_klute(closure, nk, klute);
   }
 
   if (klute.ik_carries_infos()) {
-    oop_oop_iterate_oop_map<T>(klute.ik_first_omb_offset(), klute.ik_first_omb_count(), obj, closure);
+    oop_oop_iterate_over_klute_oop_maps<T, OopClosureType>(klute, closure, obj);
   } else {
     // Fall back to normal iteration: read OopMapBlocks from Klass
     InstanceKlass* const this_ik = InstanceKlass::cast(CompressedKlassPointers::decode(nk));
@@ -231,7 +252,7 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_reverse(narrowKlass nk, KlassLU
       "Code to handle metadata is not implemented");
 
   if (klute.ik_carries_infos()) {
-    oop_oop_iterate_oop_map_reverse<T>(klute.ik_first_omb_offset(), klute.ik_first_omb_count(), obj, closure);
+    oop_oop_iterate_over_klute_oop_maps_reverse<T, OopClosureType>(klute, closure, obj);
   } else {
     // Fall back to normal iteration: read OopMapBlocks from Klass
     InstanceKlass* const this_ik = InstanceKlass::cast(CompressedKlassPointers::decode(nk));
@@ -245,12 +266,12 @@ template <typename T, class OopClosureType>
 ALWAYSINLINE void InstanceKlass::oop_oop_iterate_bounded(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj, MemRegion mr) {
   if (Devirtualizer::do_metadata(closure)) {
     if (mr.contains(obj)) {
-      Devirtualizer::do_narrow_klass(closure, nk);
+      Devirtualizer::do_klute(closure, nk, klute);
     }
   }
 
   if (klute.ik_carries_infos()) {
-    oop_oop_iterate_oop_map_bounded<T>(klute.ik_first_omb_offset(), klute.ik_first_omb_count(), obj, closure, mr);
+    oop_oop_iterate_over_klute_oop_maps<T, OopClosureType>(klute, closure, obj);
   } else {
     InstanceKlass* const this_ik = InstanceKlass::cast(CompressedKlassPointers::decode(nk));
     assert(this_ik == obj->klass(), "sanity");

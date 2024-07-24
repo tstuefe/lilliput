@@ -38,18 +38,19 @@ class outputStream;
 //
 // invalid_entry (debug zap):             1111 1111 1111 1111 1111 1111 1111 1111  (relies on kind == 0b111 == 7 being invalid)
 //
-// All valid entries:                     KKK. .... .... .... .... .... .... ....
+// All valid entries:                     KKKB .... .... .... .... .... .... ....
 //
-// InstanceKlass:                         KKKS SSSS SSSS SSSS oooo oooo cccc cccc
-// InstanceKlass, has_no_addinfo:         KKK0 0000 0000 0000 0000 0000 0000 0000  (all IK specific bits 0) (note: means that "0" is a valid IK entry with no add. info)
+// InstanceKlass:                         KKKB SSSS SSSS SSSS oooo oooo cccc cccc
+// InstanceKlass, has_no_addinfo:         KKKB 0000 0000 0000 0000 0000 0000 0000  (all IK specific bits 0) (note: means that "0" is a valid IK entry with no add. info)
 // InstanceKlass, has no oopmap entries:  KKK. .... .... .... .... .... 0000 0000  (omb count bits are 0)   (only valid if !has_no_addinfo)
 //
-// ArrayKlass:                            KKK- ---- hhhh hhhh tttt tttt eeee eeee
+// ArrayKlass:                            KKKB ---- hhhh hhhh tttt tttt eeee eeee
 //                                                  |                           |
 //                                                  |____lower 24 bit of lh_____|
 //
 // Legend
 // K : klass kind (3 bits)
+// B : klass loaded by boot loader (1 bit)
 // S : size in words (13 bits)
 // c : count of first oopmap entry (8 bits)
 // o : offset of first oopmap entry, in bytes (8 bits)
@@ -82,30 +83,36 @@ class KlassLUTEntry {
 
   static constexpr int bits_total      = 32;
 
-  // All valid entries:  KK-- ---- ---- ---- ---- ---- ---- ----
+  // All valid entries:  KKKB ---- ---- ---- ---- ---- ---- ----
   static constexpr int bits_kind       = 3;
-  static constexpr int bits_common     = bits_kind;
+  static constexpr int bits_bootloaded = 1;
+  static constexpr int bits_common     = bits_kind + bits_bootloaded;
   static constexpr int bits_specific   = bits_total - bits_common;
 
   // Bits valid for all entries, regardless of Klass kind
   struct KE {
     // lsb
     unsigned kind_specific_bits : bits_specific;
+    unsigned bootloaded         : bits_bootloaded;
     unsigned kind               : bits_kind;
     // msb
   };
 
   // Bits only valid for InstanceKlass
-  static constexpr int bits_ik_omb_offset = 8;
-  static constexpr int bits_ik_omb_count  = 8;
-  static constexpr int bits_ik_omb_bits   = bits_ik_omb_count + bits_ik_omb_offset;
+  static constexpr int bits_ik_omb_count_1  = 6;
+  static constexpr int bits_ik_omb_offset_1 = 4;
+  static constexpr int bits_ik_omb_count_2  = 6;
+  static constexpr int bits_ik_omb_offset_2 = 5;
+  static constexpr int bits_ik_omb_bits   = bits_ik_omb_count_1 + bits_ik_omb_offset_1 + bits_ik_omb_count_2 + bits_ik_omb_offset_2;
   static constexpr int bits_ik_wordsize   = bits_specific - bits_ik_omb_bits;
   struct IKE {
     // lsb
-    unsigned omb_offset : bits_ik_omb_offset;
-    unsigned omb_count  : bits_ik_omb_count;
-    unsigned wordsize   : bits_ik_wordsize;
-    unsigned other      : bits_common;
+    unsigned omb_count_1  : bits_ik_omb_count_1;
+    unsigned omb_offset_1 : bits_ik_omb_offset_1;
+    unsigned omb_count_2  : bits_ik_omb_count_2;
+    unsigned omb_offset_2 : bits_ik_omb_offset_2;
+    unsigned wordsize     : bits_ik_wordsize;
+    unsigned other        : bits_common;
     // msb
   };
 
@@ -137,8 +144,10 @@ class KlassLUTEntry {
 
   // The limits to what we can numerically represent in an (InstanceKlass) Entry
   static constexpr size_t ik_wordsize_limit = nth_bit(bits_ik_wordsize);
-  static constexpr size_t ik_omb_offset_limit = nth_bit(bits_ik_omb_offset);
-  static constexpr size_t ik_omb_count_limit = nth_bit(bits_ik_omb_count);
+  static constexpr size_t ik_omb_offset_1_limit = nth_bit(bits_ik_omb_offset_1);
+  static constexpr size_t ik_omb_count_1_limit = nth_bit(bits_ik_omb_count_1);
+  static constexpr size_t ik_omb_offset_2_limit = nth_bit(bits_ik_omb_offset_2);
+  static constexpr size_t ik_omb_count_2_limit = nth_bit(bits_ik_omb_count_2);
 
   static uint32_t build_from_ik(const InstanceKlass* k, const char*& not_encodable_reason);
   static uint32_t build_from_ak(const ArrayKlass* k);
@@ -168,8 +177,10 @@ public:
 
   uint32_t value() const { return _v.raw; }
 
-  // Returns kind
   inline unsigned kind() const { return _v.common.kind; }
+
+  // true if loaded by boot loader
+  inline bool bootloaded() const { return _v.common.bootloaded; }
 
   bool is_array() const     { return _v.common.kind >= FirstArrayKlassKind; }
   bool is_instance() const  { return !is_array(); }
@@ -193,10 +204,16 @@ public:
   inline int ik_wordsize() const;
 
   // Returns count of first OopMapBlock, 0 if there is no oop map block.
-  inline unsigned ik_first_omb_count() const;
+  inline unsigned ik_omb_count_1() const;
 
-  // Returns offset of first OopMapBlock. Only call if count is > 0
-  inline unsigned ik_first_omb_offset() const;
+  // Returns offset of first OopMapBlock in number-of-oops (so, scaled by BytesPerHeapOop).
+  inline unsigned ik_omb_offset_1() const;
+
+  // Returns count of second OopMapBlock, 0 if there is no second oop map block.
+  inline unsigned ik_omb_count_2() const;
+
+  // Returns offset of second OopMapBlock in number-of-oops (so, scaled by BytesPerHeapOop).
+  inline unsigned ik_omb_offset_2() const;
 
   // Following methods only if AK:
 

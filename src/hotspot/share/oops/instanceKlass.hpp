@@ -1026,6 +1026,12 @@ public:
   template <typename T, class OopClosureType>
   static inline void oop_oop_iterate_oop_map(unsigned offset, unsigned count, oop obj, OopClosureType* closure);
 
+  template <typename T, class OopClosureType>
+  static inline void oop_oop_iterate_over_klute_oop_maps(KlassLUTEntry klute, OopClosureType* closure, oop obj);
+
+  template <typename T, class OopClosureType>
+  static inline void oop_oop_iterate_over_klute_oop_maps_reverse(KlassLUTEntry klute, OopClosureType* closure, oop obj);
+
   // Reverse iteration
   // Iterate over all oop fields and metadata.
   template <typename T, class OopClosureType>

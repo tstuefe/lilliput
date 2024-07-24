@@ -132,13 +132,6 @@ inline void Devirtualizer::do_klass(OopClosureType* closure, Klass* k) {
   call_do_klass(&OopClosureType::do_klass, &OopIterateClosure::do_klass, closure, k);
 }
 
-template <typename OopClosureType>
-inline void Devirtualizer::do_narrow_klass(OopClosureType* closure, narrowKlass nk) {
-  // Todo: optimize
-  Klass* const k = CompressedKlassPointers::decode(nk);
-  call_do_klass(&OopClosureType::do_klass, &OopIterateClosure::do_klass, closure, k);
-}
-
 // Implementation of the non-virtual do_cld dispatch.
 
 template <typename Receiver, typename Base, typename OopClosureType>
@@ -155,6 +148,15 @@ call_do_cld(void (Receiver::*)(ClassLoaderData*), void (Base::*)(ClassLoaderData
 
 template <typename OopClosureType>
 void Devirtualizer::do_cld(OopClosureType* closure, ClassLoaderData* cld) {
+  call_do_cld(&OopClosureType::do_cld, &OopIterateClosure::do_cld, closure, cld);
+}
+
+template <typename OopClosureType>
+inline void Devirtualizer::do_klute(OopClosureType* closure, narrowKlass nk, KlassLUTEntry klute) {
+  ClassLoaderData* const cld =
+      klute.bootloaded() ?
+      ClassLoaderData::the_null_class_loader_data() :
+      CompressedKlassPointers::decode_not_null(nk)->class_loader_data();
   call_do_cld(&OopClosureType::do_cld, &OopIterateClosure::do_cld, closure, cld);
 }
 

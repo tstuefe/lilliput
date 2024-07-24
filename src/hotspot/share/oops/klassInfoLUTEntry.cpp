@@ -44,18 +44,32 @@ union LayoutHelperHelper {
   } bytes;
 };
 
+// small helper
+static void read_and_check_omb_values(const OopMapBlock* omb, unsigned& omb_offset, unsigned& omb_count) {
+  const int offset_bytes = omb->offset();
+  assert(offset_bytes > 0 && is_aligned(offset_bytes, BytesPerHeapOop),
+         "weird or misaligned oop map block offset (%d)", offset_bytes);
+  omb_offset = (unsigned)offset_bytes / BytesPerHeapOop;
+
+  const unsigned count = omb->count();
+  assert(count > 0, "omb count zero?");
+  omb_count = count;
+}
+
 uint32_t KlassLUTEntry::build_from_ik(const InstanceKlass* ik, const char*& not_encodable_reason) {
 
   assert(ik->is_instance_klass(), "sanity");
 
   const int kind = ik->kind();
   const int lh = ik->layout_helper();
+  const bool loaded_by_bootloader = ik->class_loader_data()->is_boot_class_loader_data();
 
   U value(0);
 
   // Set common bits, these are always present
   assert(kind < 0b111, "sanity");
   value.common.kind = kind;
+  value.common.bootloaded = loaded_by_bootloader ? 1 : 0;
 
   // We may not be able to encode the IK-specific info; if we can't, those bits are left zero
   // and we return an error string for logging
@@ -77,36 +91,48 @@ uint32_t KlassLUTEntry::build_from_ik(const InstanceKlass* ik, const char*& not_
   }
 
   // Has more than one nonstatic OopMapBlock?
-  const int num_omb = ik->nonstatic_oop_map_count();
-  if (num_omb > 1) {
-    NOPE("More than 1 oop map blocks");
+  const int oop_map_count = ik->nonstatic_oop_map_count();
+
+  unsigned omb_offset_1 = 0, omb_count_1 = 0, omb_offset_2 = 0, omb_count_2 = 0;
+
+  switch(oop_map_count) {
+  case 0: // nothing to do
+    break;
+  case 1:
+    read_and_check_omb_values(ik->start_of_nonstatic_oop_maps(), omb_offset_1, omb_count_1);
+    break;
+  case 2:
+    read_and_check_omb_values(ik->start_of_nonstatic_oop_maps(), omb_offset_1, omb_count_1);
+    read_and_check_omb_values(ik->start_of_nonstatic_oop_maps() + 1, omb_offset_2, omb_count_2);
+    break;
+  default:
+    NOPE("More than 2 oop map blocks");
   }
 
-  unsigned first_omb_count = 0;
-  int first_omb_offset = 0;
+  if (omb_offset_1 >= ik_omb_offset_1_limit) {
+    NOPE("omb offset 1 overflow");
+  }
 
-  if (num_omb == 1) {
-    first_omb_count = ik->start_of_nonstatic_oop_maps()->count();
-    first_omb_offset = ik->start_of_nonstatic_oop_maps()->offset();
+  if (omb_count_1 >= ik_omb_count_1_limit) {
+    NOPE("omb count 1 overflow");
+  }
 
-    assert(first_omb_count > 0, "Unexpected omb count");
-    assert(first_omb_offset >= (oopDesc::header_size() * BytesPerWord), "Unexpected omb offset");
+  if (omb_offset_2 >= ik_omb_offset_2_limit) {
+    NOPE("omb offset 2 overflow");
+  }
 
-    if (first_omb_count >= ik_omb_count_limit) {
-      NOPE("1 omb, but count too large");
-    }
-
-    if (first_omb_offset >= (int)ik_omb_offset_limit) {
-      NOPE("1 omb, but offset too large");
-    }
+  if (omb_count_2 >= ik_omb_count_2_limit) {
+    NOPE("omb count 2 overflow");
   }
 
 #undef NOPE
   // Okay, we are good.
 
   value.ike.wordsize = wordsize;
-  value.ike.omb_count = first_omb_count;
-  value.ike.omb_offset = first_omb_offset;
+  value.ike.omb_count_1 = omb_count_1;
+  value.ike.omb_offset_1 = omb_offset_1;
+  value.ike.omb_count_2 = omb_count_2;
+  value.ike.omb_offset_2 = omb_offset_2;
 
   return value.raw;
 
@@ -118,12 +144,14 @@ uint32_t KlassLUTEntry::build_from_ak(const ArrayKlass* ak) {
 
   const int kind = ak->kind();
   const int lh = ak->layout_helper();
+  const bool loaded_by_bootloader = ak->class_loader_data()->is_boot_class_loader_data();
 
   assert(Klass::layout_helper_is_objArray(lh) || Klass::layout_helper_is_typeArray(lh), "unexpected");
 
   LayoutHelperHelper lhu = { (unsigned) lh };
   U value(0);
   value.common.kind = kind;
+  value.common.bootloaded = loaded_by_bootloader ? 1 : 0;
   value.ake.lh_ebt = lhu.bytes.lh_ebt;
   value.ake.lh_esz = lhu.bytes.lh_esz;
   value.ake.lh_hsz = lhu.bytes.lh_hsz;
@@ -156,7 +184,6 @@ void KlassLUTEntry::verify_against(const Klass* k) const {
   // to place them in a header
   STATIC_ASSERT(bits_common + bits_specific == bits_total);
   STATIC_ASSERT(32 == bits_total);
-  STATIC_ASSERT(bits_ik_omb_offset + bits_ik_omb_count + bits_ik_wordsize <= bits_specific);
   STATIC_ASSERT(bits_ak_lh <= bits_specific);
 
   STATIC_ASSERT(sizeof(KE) == sizeof(uint32_t));
@@ -180,6 +207,9 @@ void KlassLUTEntry::verify_against(const Klass* k) const {
 
   assert(our_kind == real_kind, "kind mismatch (%d vs %d) (%x)", real_kind, our_kind, _v.raw);
 
+  const int real_loaded_by_bootloader = k->class_loader_data()->is_boot_class_loader_data();
+  assert(real_loaded_by_bootloader == bootloaded(), "Bootloaded? mismatch");
+
   if (k->is_array_klass()) {
 
     // compare our (truncated) lh with the real one
@@ -196,36 +226,51 @@ void KlassLUTEntry::verify_against(const Klass* k) const {
     assert(k->is_instance_klass(), "unexpected");
     const InstanceKlass* const ik = InstanceKlass::cast(k);
 
+    const int real_oop_map_count = ik->nonstatic_oop_map_count();
+    const unsigned omb_offset_1 = (real_oop_map_count >= 1) ? (unsigned)ik->start_of_nonstatic_oop_maps()[0].offset() : max_uintx;
+    const unsigned omb_count_1 =  (real_oop_map_count >= 1) ? ik->start_of_nonstatic_oop_maps()[0].count() : max_uintx;
+    const unsigned omb_offset_2 = (real_oop_map_count >= 2) ? (unsigned)ik->start_of_nonstatic_oop_maps()[1].offset() : max_uintx;
+    const unsigned omb_count_2 =  (real_oop_map_count >= 2) ? ik->start_of_nonstatic_oop_maps()[1].count() : max_uintx;
+
+    const int real_wordsize = Klass::layout_helper_needs_slow_path(real_lh) ?
+        -1 : Klass::layout_helper_to_size_helper(real_lh);
+
     if (ik_carries_infos()) {
 
       // check wordsize
-      assert(Klass::layout_helper_needs_slow_path(real_lh) == false, "LH needs slow path?  (%x)", _v.raw);
-      const int real_wordsize = Klass::layout_helper_to_size_helper(real_lh);
       assert(real_wordsize == ik_wordsize(), "wordsize mismatch? (%d vs %d) (%x)", real_wordsize, ik_wordsize(), _v.raw);
 
       // check omb info
-      if (ik->nonstatic_oop_map_count() == 0) {
-        assert(ik_first_omb_offset() == 0 && ik_first_omb_count() == 0, "omb should not be present (%x)", _v.raw);
-      } else if (ik->nonstatic_oop_map_count() == 1) {
-        assert(ik_first_omb_offset() == (unsigned)ik->start_of_nonstatic_oop_maps()[0].offset(), "first omb offset mismatch (%x)", _v.raw);
-        assert(ik_first_omb_count() == ik->start_of_nonstatic_oop_maps()[0].count(), "first omb count mismatch (%x)", _v.raw);
-      } else {
-        fatal("More than one oop maps, IKE should not be encodable");
+      switch (real_oop_map_count) {
+      case 0: {
+        assert(ik_omb_offset_1() == 0 && ik_omb_count_1() == 0 &&
+               ik_omb_offset_2() == 0 && ik_omb_count_2() == 0, "omb should not be present (0x%x)", _v.raw);
       }
-
+      break;
+      case 1: {
+        assert(ik_omb_offset_1() * BytesPerHeapOop == omb_offset_1, "first omb offset mismatch (0x%x)", _v.raw);
+        assert(ik_omb_count_1() == omb_count_1, "first omb count mismatch (0x%x)", _v.raw);
+        assert(ik_omb_offset_2() == 0 && ik_omb_count_2() == 0, "second omb should not be present (0x%x)", _v.raw);
+      }
+      break;
+      case 2: {
+        assert(ik_omb_offset_1() * BytesPerHeapOop == omb_offset_1, "first omb offset mismatch (0x%x)", _v.raw);
+        assert(ik_omb_count_1() == omb_count_1, "first omb count mismatch (0x%x)", _v.raw);
+        assert(ik_omb_offset_2() * BytesPerHeapOop == omb_offset_2, "second omb offset mismatch (0x%x)", _v.raw);
+        assert(ik_omb_count_2() == omb_count_2, "second omb count mismatch (0x%x)", _v.raw);
+      }
+      break;
+      default: fatal("More than one oop maps, IKE should not be encodable");
+      }
     } else {
       // Check if this Klass should, in fact, have been encodable
-      const bool lh_slow_path = Klass::layout_helper_needs_slow_path(real_lh);
-      const int word_size = (lh_slow_path == false) ? Klass::layout_helper_to_size_helper(real_lh) : -1;
-      const int oop_map_count = ik->nonstatic_oop_map_count();
-      const int first_omb_offset = (oop_map_count == 1) ? ik->start_of_nonstatic_oop_maps()[0].offset() : -1;
-      const int first_omb_count = (oop_map_count == 1) ? ik->start_of_nonstatic_oop_maps()[0].count() : -1;
-
-      assert( lh_slow_path ||
-              (word_size >= (int)ik_wordsize_limit) ||
-              (oop_map_count > 1) ||
-              (first_omb_offset >= (int)ik_omb_offset_limit) ||
-              (first_omb_count >= (int)ik_omb_count_limit),
+      assert( Klass::layout_helper_needs_slow_path(real_lh)       ||
+              (real_wordsize >= (int)ik_wordsize_limit)           ||
+              (real_oop_map_count > 2)                            ||
+              ((size_t) omb_offset_1 >= ik_omb_offset_1_limit)    ||
+              ((size_t) omb_count_1 >= ik_omb_count_1_limit)      ||
+              ((size_t) omb_offset_2 >= ik_omb_offset_2_limit)    ||
+              ((size_t) omb_count_2 >= ik_omb_count_2_limit),
               "Klass should have been encodable" );
     }
   }
