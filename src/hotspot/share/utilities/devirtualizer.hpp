@@ -25,6 +25,7 @@
 #ifndef SHARE_UTILITIES_DEVIRTUALIZER_HPP
 #define SHARE_UTILITIES_DEVIRTUALIZER_HPP
 
+#include "oops/klassInfoLUTEntry.hpp"
 #include "oops/oopsHierarchy.hpp"
 #include "utilities/bitMap.hpp"
 
@@ -36,11 +37,12 @@ class Devirtualizer {
  public:
   template <typename OopClosureType, typename T> static void do_oop(OopClosureType* closure, T* p);
   template <typename OopClosureType>             static void do_klass(OopClosureType* closure, Klass* k);
-  template <typename OopClosureType>             static void do_narrow_klass(OopClosureType* closure, narrowKlass nk);
   template <typename OopClosureType>             static void do_cld(OopClosureType* closure, ClassLoaderData* cld);
   template <typename OopClosureType>             static bool do_metadata(OopClosureType* closure);
   template <typename DerivedOopClosureType>      static void do_derived_oop(DerivedOopClosureType* closure, derived_base* base, derived_pointer* derived);
   template <typename BitMapClosureType>          static bool do_bit(BitMapClosureType* closure, BitMap::idx_t index);
+
+  template <typename OopClosureType>             static void do_klute(OopClosureType* closure, narrowKlass nk, KlassLUTEntry klute);
 };
 
 #endif // SHARE_UTILITIES_DEVIRTUALIZER_HPP

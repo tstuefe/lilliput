@@ -64,6 +64,7 @@ class KlassInfoLUT : public AllStatic {
   f(hits_ISCK)         \
   f(hits_TAK)          \
   f(hits_OAK)          \
+  f(hits_bootloaded)   \
   f(noinfo_IMK)        \
   f(noinfo_ICLK)       \
   f(noinfo_IK_other)

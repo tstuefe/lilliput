@@ -46,15 +46,27 @@ inline int KlassLUTEntry::ik_wordsize() const {
 }
 
 // Returns count of first OopMapBlock. Returns 0 if there is no OopMapBlock.
-inline unsigned KlassLUTEntry::ik_first_omb_count() const {
+inline unsigned KlassLUTEntry::ik_omb_count_1() const {
   assert(is_instance() && ik_carries_infos(), "only for valid ik entries");
-  return _v.ike.omb_count;
+  return _v.ike.omb_count_1;
 }
 
 // Returns offset of first OopMapBlock. Only call if count is > 0
-inline unsigned KlassLUTEntry::ik_first_omb_offset() const {
+inline unsigned KlassLUTEntry::ik_omb_offset_1() const {
   assert(is_instance() && ik_carries_infos(), "only for valid ik entries");
-  return _v.ike.omb_offset;
+  return _v.ike.omb_offset_1;
+}
+
+// Returns count of second OopMapBlock. Returns 0 if there is no second OopMapBlock.
+inline unsigned KlassLUTEntry::ik_omb_count_2() const {
+  assert(is_instance() && ik_carries_infos(), "only for valid ik entries");
+  return _v.ike.omb_count_2;
+}
+
+// Returns offset of second OopMapBlock. Only call if count is > 0
+inline unsigned KlassLUTEntry::ik_omb_offset_2() const {
+  assert(is_instance() && ik_carries_infos(), "only for valid ik entries");
+  return _v.ike.omb_offset_2;
 }
 
 // calculates word size given header size, element size, and array length

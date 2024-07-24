@@ -103,18 +103,25 @@ ALL_KLASS_KINDS_DO(XX)
 const uint64_t hits_ak = counter_hits_OAK + counter_hits_TAK;
   const uint64_t hits_ik = hits - hits_ak;
   const uint64_t no_info_hits = counter_noinfo_ICLK + counter_noinfo_IMK + counter_noinfo_IK_other;
+
   st->print("   IK hits total: ");
   st->fill_to(22);
   st->print_cr(UINT64_FORMAT " (%.1f%%)", hits_ik, PERCENTAGE_OF(hits_ik, hits));
+
   st->print("   AK hits total: ");
   st->fill_to(22);
   st->print_cr(UINT64_FORMAT " (%.1f%%)", hits_ak, PERCENTAGE_OF(hits_ak, hits));
+
   st->print_cr("   IK details missing in %.2f%% of all IK hits (IMK: %.2f%%, ICLK: %.2f%%, other: %.2f%%)",
                PERCENTAGE_OF(no_info_hits, hits_ik),
                PERCENTAGE_OF(counter_noinfo_IMK, hits_ik),
                PERCENTAGE_OF(counter_noinfo_ICLK, hits_ik),
                PERCENTAGE_OF(counter_noinfo_IK_other, hits_ik)
   );
+
+  st->print("   Hits of bootloaded Klass: ");
+  st->fill_to(22);
+  st->print_cr(UINT64_FORMAT " (%.1f%%)", counter_hits_bootloaded, PERCENTAGE_OF(counter_hits_bootloaded, hits));
 }
 
 #ifdef KLUT_ENABLE_EXPENSIVE_STATS
@@ -131,6 +138,9 @@ void KlassInfoLUT::update_hit_stats(KlassLUTEntry klute) {
       case Klass::InstanceMirrorKlassKind: inc_noinfo_IMK(); break;
       default: inc_noinfo_IK_other(); break;
     }
+  }
+  if (klute.bootloaded()) {
+    inc_hits_bootloaded();
   }
 }
 #endif // KLUT_ENABLE_EXPENSIVE_STATS

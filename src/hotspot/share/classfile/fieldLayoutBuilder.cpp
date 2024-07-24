@@ -607,28 +607,38 @@ void FieldLayoutBuilder::insert_contended_padding(LayoutRawBlock* slot) {
 }
 
 // Helper function for compute_regular_layout()
-// Return true if oop fields of ik should be placed at start, false if at end.
+// Return true if oop fields of currently assembled IK should be placed at start,
+// false if at end.
 static bool should_lead_with_oops(const InstanceKlass* super) {
+
   if (super == nullptr) {
     return false;
   }
-  // If we have a regular InstanceKlass, we can calculate the object
-  // size without an object. In that case, lead with oops if super class
-  // has an oop map and it borders the end of the object.
-  const unsigned super_omb_count = super->nonstatic_oop_map_count();
-  if (super_omb_count > 0) {
-    const int super_kind = super->kind();
-    const int super_lh = super->layout_helper();
-    if (super_kind == Klass::InstanceKlassKind &&
-        !Klass::layout_helper_needs_slow_path(super_lh)) {
-      const OopMapBlock* const last_omb = super->start_of_nonstatic_oop_maps() + super_omb_count - 1;
-      const unsigned last_oop_end_bytes = last_omb->offset() + last_omb->count() * BytesPerHeapOop;
-      const unsigned obj_size_bytes = Klass::layout_helper_to_size_helper(super_lh) * BytesPerWord;
-      return obj_size_bytes == last_oop_end_bytes;
+
+  fieldDescriptor fd;
+  int offset = -1;
+
+  // Find last nonstatic field
+  for (AllFieldStream fs(super); !fs.done(); fs.next()) {
+    if (!fs.access_flags().is_static()) {
+      if (offset < fs.offset()) {
+        offset = fs.offset();
+        fd = fs.field_descriptor();
+      }
     }
   }
-  // We don't know object size. Just guess: lead with oops if parent has oops, otherwise let oops trail
-  return super_omb_count > 0;
+
+  // If super class objects end with an oop, sub class objects should lead with oops to merge
+  // their OMB with that of the super class. If super class ends with a non-oop, or if super
+  // class has no non-static fields, let sub class trail with oops, in order to give
+  // sub-sub-class-objects a chance of merging their OMB with that of the sub class.
+  if (offset > 0) {
+    const BasicType type = fd.field_type();
+    return type == T_OBJECT || type == T_NARROWOOP;
+  }
+
+  assert(offset < 0, "offset 0?"); // offset includes header?
+  return false;
 }
 
 // Computation of regular classes layout is an evolution of the previous default layout
@@ -649,10 +659,6 @@ void FieldLayoutBuilder::compute_regular_layout() {
     need_tail_padding = true;
   }
 
-  // We place oop fields at the start of the object if there is a chance of
-  // these fields being merged with those of the super class(es) to one OopMapBlock.
-  // Otherwise, we place them at the end, for the same reason - to make it more likely
-  // child classes will merge their omb's with our trailing one.
   if (should_lead_with_oops(_super_klass)) {
     _layout->add(_root_group->oop_fields());
     _layout->add(_root_group->primitive_fields());
