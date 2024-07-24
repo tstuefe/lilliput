@@ -89,19 +89,19 @@ void InstanceStackChunkKlass::oop_oop_iterate_bounded(oop obj, OopClosureType* c
 
 // Klute variants don't do anything else for now. Just exist to make Dispatch happy.
 template <typename T, class OopClosureType>
-void InstanceStackChunkKlass::oop_oop_iterate(narrowKlass nk, KlassLUTEntry ignored, OopClosureType* closure, oop obj) {
+void InstanceStackChunkKlass::oop_oop_iterate(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate<T>(obj, closure);
 }
 
 template <typename T, class OopClosureType>
-void InstanceStackChunkKlass::oop_oop_iterate_reverse(narrowKlass nk, KlassLUTEntry ignored, OopClosureType* closure, oop obj) {
+void InstanceStackChunkKlass::oop_oop_iterate_reverse(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate_reverse<T>(obj, closure);
 }
 
 template <typename T, class OopClosureType>
-void InstanceStackChunkKlass::oop_oop_iterate_bounded(narrowKlass nk, KlassLUTEntry ignored, OopClosureType* closure, oop obj, MemRegion mr) {
+void InstanceStackChunkKlass::oop_oop_iterate_bounded(OopClosureType* closure, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate_bounded<T>(obj, closure, mr);
 }

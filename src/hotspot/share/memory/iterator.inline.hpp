@@ -389,22 +389,22 @@ void OopIteratorClosureDispatch::ITERATION_FUNCTION ARGUMENT_DEFINITION {       
 DEFINE_DISPATCH_CLASS(
     OopOopIterateDispatchWithKlute,
     oop_oop_iterate,
-    (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj),
-    (nk, klute, cl, obj)
+    (OopClosureType* cl, oop obj, KlassLUTEntry klute, narrowKlass nk),
+    (cl, obj, klute, nk)
 )
 
 DEFINE_DISPATCH_CLASS(
     OopOopIterateDispatchWithKluteReverse,
     oop_oop_iterate_reverse,
-    (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj),
-    (nk, klute, cl, obj)
+    (OopClosureType* cl, oop obj, KlassLUTEntry klute, narrowKlass nk),
+    (cl, obj, klute, nk)
 )
 
 DEFINE_DISPATCH_CLASS(
     OopOopIterateDispatchWithKluteBounded,
     oop_oop_iterate_bounded,
-    (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj, MemRegion mr),
-    (nk, klute, cl, obj, mr)
+    (OopClosureType* cl, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk),
+    (cl, obj, mr, klute, nk)
 )
 
 // Same, but returns object size
@@ -501,22 +501,22 @@ size_t OopIteratorClosureDispatch::ITERATION_FUNCTION ## _size ARGUMENT_DEFINITI
 DEFINE_DISPATCH_CLASS_RETURN_OBJ_SIZE(
     OopOopIterateDispatchWithKluteReturnSize,
     oop_oop_iterate,
-    (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj),
-    (nk, klute, cl, obj)
+    (OopClosureType* cl, oop obj, KlassLUTEntry klute, narrowKlass nk),
+    (cl, obj, klute, nk)
 )
 
 DEFINE_DISPATCH_CLASS_RETURN_OBJ_SIZE(
     OopOopIterateDispatchWithKluteReverseReturnSize,
     oop_oop_iterate_reverse,
-    (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj),
-    (nk, klute, cl, obj)
+    (OopClosureType* cl, oop obj, KlassLUTEntry klute, narrowKlass nk),
+    (cl, obj, klute, nk)
 )
 
 DEFINE_DISPATCH_CLASS_RETURN_OBJ_SIZE(
     OopOopIterateDispatchWithKluteBoundedReturnSize,
     oop_oop_iterate_bounded,
-    (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj, MemRegion mr),
-    (nk, klute, cl, obj, mr)
+    (OopClosureType* cl, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk),
+    (cl, obj, mr, klute, nk)
 )
 
 #endif // SHARE_MEMORY_ITERATOR_INLINE_HPP

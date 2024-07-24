@@ -320,12 +320,12 @@ class OopIteratorClosureDispatch {
   template <typename OopClosureType> static void oop_oop_iterate_backwards(OopClosureType* cl, oop obj, Klass* klass);
 
   // Note: we only need Klass* for later, in the Klass, to optionally do metadata iteration. However, this may hopefully change in the future.
-  template <typename OopClosureType> static void oop_oop_iterate          (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj);
-  template <typename OopClosureType> static void oop_oop_iterate_reverse  (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj);
-  template <typename OopClosureType> static void oop_oop_iterate_bounded  (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj, MemRegion mr);
-  template <typename OopClosureType> static size_t oop_oop_iterate_size        (narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj);
-  template <typename OopClosureType> static size_t oop_oop_iterate_reverse_size(narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj);
-  template <typename OopClosureType> static size_t oop_oop_iterate_bounded_size(narrowKlass nk, KlassLUTEntry klute, OopClosureType* cl, oop obj, MemRegion mr);
+  template <typename OopClosureType> static void oop_oop_iterate          (OopClosureType* cl, oop obj, KlassLUTEntry klute, narrowKlass nk);
+  template <typename OopClosureType> static void oop_oop_iterate_reverse  (OopClosureType* cl, oop obj, KlassLUTEntry klute, narrowKlass nk);
+  template <typename OopClosureType> static void oop_oop_iterate_bounded  (OopClosureType* cl, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk);
+  template <typename OopClosureType> static size_t oop_oop_iterate_size        (OopClosureType* cl, oop obj, KlassLUTEntry klute, narrowKlass nk);
+  template <typename OopClosureType> static size_t oop_oop_iterate_reverse_size(OopClosureType* cl, oop obj, KlassLUTEntry klute, narrowKlass nk);
+  template <typename OopClosureType> static size_t oop_oop_iterate_bounded_size(OopClosureType* cl, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk);
 
 };
 

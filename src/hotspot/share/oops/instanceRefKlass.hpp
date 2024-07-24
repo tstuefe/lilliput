@@ -81,11 +81,11 @@ class InstanceRefKlass: public InstanceKlass {
 
   // klute variants
   template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj);
+  static inline void oop_oop_iterate(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk);
   template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_reverse(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj);
+  static inline void oop_oop_iterate_reverse(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk);
   template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_bounded(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj, MemRegion mr);
+  static inline void oop_oop_iterate_bounded(OopClosureType* closure, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk);
 
   private:
 

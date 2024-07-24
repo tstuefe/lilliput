@@ -1023,18 +1023,6 @@ public:
   template <typename T, class OopClosureType>
   static inline void oop_oop_iterate_oop_map(OopMapBlock* map, oop obj, OopClosureType* closure);
 
-  template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_oop_map(unsigned offset, unsigned count, oop obj, OopClosureType* closure);
-
-  template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_over_klute_oop_maps(KlassLUTEntry klute, OopClosureType* closure, oop obj);
-
-  template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_over_klute_oop_maps_reverse(KlassLUTEntry klute, OopClosureType* closure, oop obj);
-
-  template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_over_klute_oop_maps_bounded(KlassLUTEntry klute, OopClosureType* closure, oop obj, MemRegion mr);
-
   // Reverse iteration
   // Iterate over all oop fields and metadata.
   template <typename T, class OopClosureType>
@@ -1048,8 +1036,6 @@ public:
   // Iterate over all oop fields in one oop map.
   template <typename T, class OopClosureType>
   static inline void oop_oop_iterate_oop_map_reverse(OopMapBlock* map, oop obj, OopClosureType* closure);
-  template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_oop_map_reverse(unsigned offset, unsigned count, oop obj, OopClosureType* closure);
 
   // Bounded range iteration
  public:
@@ -1065,18 +1051,24 @@ public:
   // Iterate over all oop fields in one oop map.
   template <typename T, class OopClosureType>
   static inline void oop_oop_iterate_oop_map_bounded(OopMapBlock* map, oop obj, OopClosureType* closure, MemRegion mr);
+
+  // Single oop map iteration given by count and offset
   template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_oop_map_bounded(unsigned offset, unsigned count, oop obj, OopClosureType* closure, MemRegion mr);
+  static inline void oop_oop_iterate_single_oop_map(OopClosureType* closure, oop obj, unsigned offset, unsigned count);
+  template <typename T, class OopClosureType>
+  static inline void oop_oop_iterate_single_oop_map_reverse(OopClosureType* closure, oop obj, unsigned offset, unsigned count);
+  template <typename T, class OopClosureType>
+  static inline void oop_oop_iterate_single_oop_map_bounded(OopClosureType* closure, oop obj, MemRegion mr, unsigned offset, unsigned count);
 
  public:
 
   // klute variants
   template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj);
+  static inline void oop_oop_iterate(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk);
   template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_reverse(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj);
+  static inline void oop_oop_iterate_reverse(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk);
   template <typename T, class OopClosureType>
-  static inline void oop_oop_iterate_bounded(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj, MemRegion mr);
+  static inline void oop_oop_iterate_bounded(OopClosureType* closure, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk);
 
  public:
   u2 idnum_allocated_count() const      { return _idnum_allocated_count; }

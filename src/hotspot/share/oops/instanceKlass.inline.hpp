@@ -85,7 +85,25 @@ inline void InstanceKlass::release_set_methods_jmethod_ids(jmethodID* jmeths) {
 // as the previous macro based implementation.
 
 template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map(unsigned offset, unsigned count, oop obj, OopClosureType* closure) {
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map(OopMapBlock* map, oop obj, OopClosureType* closure) {
+  assert(map->offset() > 0, "must be");
+  oop_oop_iterate_single_oop_map<T>(closure, obj, (unsigned)map->offset(), map->count());
+}
+
+template <typename T, class OopClosureType>
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map_reverse(OopMapBlock* map, oop obj, OopClosureType* closure) {
+  assert(map->offset() > 0, "must be");
+  oop_oop_iterate_single_oop_map_reverse<T>(closure, obj, (unsigned)map->offset(), map->count());
+}
+
+template <typename T, class OopClosureType>
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map_bounded(OopMapBlock* map, oop obj, OopClosureType* closure, MemRegion mr) {
+  assert(map->offset() > 0, "must be");
+  oop_oop_iterate_single_oop_map_bounded<T>(closure, obj, mr, (unsigned)map->offset(), map->count());
+}
+
+template <typename T, class OopClosureType>
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_single_oop_map(OopClosureType* closure, oop obj, unsigned offset, unsigned count) {
   T* p         = obj->field_addr<T>(offset);
   T* const end = p + count;
 
@@ -95,13 +113,7 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map(unsigned offset, unsign
 }
 
 template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map(OopMapBlock* map, oop obj, OopClosureType* closure) {
-  assert(map->offset() > 0, "must be");
-  oop_oop_iterate_oop_map<T>((unsigned)map->offset(), map->count(), obj, closure);
-}
-
-template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map_reverse(unsigned offset, unsigned count, oop obj, OopClosureType* closure) {
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_single_oop_map_reverse(OopClosureType* closure, oop obj, unsigned offset, unsigned count) {
   T* const start = obj->field_addr<T>(offset);
   T*       p     = start + count;
 
@@ -112,13 +124,7 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map_reverse(unsigned offset
 }
 
 template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map_reverse(OopMapBlock* map, oop obj, OopClosureType* closure) {
-  assert(map->offset() > 0, "must be");
-  oop_oop_iterate_oop_map_reverse<T>((unsigned)map->offset(), map->count(), obj, closure);
-}
-
-template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map_bounded(unsigned offset, unsigned count, oop obj, OopClosureType* closure, MemRegion mr) {
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_single_oop_map_bounded(OopClosureType* closure, oop obj, MemRegion mr, unsigned offset, unsigned count) {
   T* p   = obj->field_addr<T>(offset);
   T* end = p + count;
 
@@ -138,12 +144,6 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map_bounded(unsigned offset
   for (;p < end; ++p) {
     Devirtualizer::do_oop(closure, p);
   }
-}
-
-template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_oop_map_bounded(OopMapBlock* map, oop obj, OopClosureType* closure, MemRegion mr) {
-  assert(map->offset() > 0, "must be");
-  oop_oop_iterate_oop_map_bounded<T>((unsigned)map->offset(), map->count(), obj, closure, mr);
 }
 
 template <typename T, class OopClosureType>
@@ -205,49 +205,23 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_bounded(oop obj, OopClosureType
   oop_oop_iterate_oop_maps_bounded<T>(obj, closure, mr);
 }
 
-template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_over_klute_oop_maps(KlassLUTEntry klute, OopClosureType* closure, oop obj) {
-  assert(klute.ik_carries_infos(), "Sanity");
-  if (klute.ik_omb_count_1() > 0) {
-    oop_oop_iterate_oop_map<T>(klute.ik_omb_offset_1() * sizeof(T), klute.ik_omb_count_1(), obj, closure);
-    if (klute.ik_omb_count_2() > 0) {
-      oop_oop_iterate_oop_map<T>(klute.ik_omb_offset_2() * sizeof(T), klute.ik_omb_count_2(), obj, closure);
-    }
-  }
-}
+// Klute variants
 
-template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_over_klute_oop_maps_reverse(KlassLUTEntry klute, OopClosureType* closure, oop obj) {
-  assert(klute.ik_carries_infos(), "Sanity");
-  if (klute.ik_omb_count_1() > 0) {
-    if (klute.ik_omb_count_2() > 0) {
-      oop_oop_iterate_oop_map_reverse<T>(klute.ik_omb_offset_2() * sizeof(T), klute.ik_omb_count_2(), obj, closure);
-    }
-    oop_oop_iterate_oop_map_reverse<T>(klute.ik_omb_offset_1() * sizeof(T), klute.ik_omb_count_1(), obj, closure);
-  }
-}
-
-template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_over_klute_oop_maps_bounded(KlassLUTEntry klute, OopClosureType* closure, oop obj, MemRegion mr) {
-  assert(klute.ik_carries_infos(), "Sanity");
-  if (klute.ik_omb_count_1() > 0) {
-    oop_oop_iterate_oop_map_bounded<T>(klute.ik_omb_offset_1() * sizeof(T), klute.ik_omb_count_1(), obj, closure, mr);
-    if (klute.ik_omb_count_2() > 0) {
-      oop_oop_iterate_oop_map_bounded<T>(klute.ik_omb_offset_2() * sizeof(T), klute.ik_omb_count_2(), obj, closure, mr);
-    }
-  }
-}
-
-// oop iteration via klute
 // Iterate over all oop fields and metadata.
 template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj) {
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
   if (Devirtualizer::do_metadata(closure)) {
     Devirtualizer::do_klute(closure, nk, klute);
   }
 
   if (klute.ik_carries_infos()) {
-    oop_oop_iterate_over_klute_oop_maps<T, OopClosureType>(klute, closure, obj);
+    // klute may encode 0, 1 or 2 oop maps. Iterate those.
+    if (klute.ik_omb_count_1() > 0) {
+      oop_oop_iterate_single_oop_map<T>(closure, obj, klute.ik_omb_offset_1() * sizeof(T), klute.ik_omb_count_1());
+      if (klute.ik_omb_count_2() > 0) {
+        oop_oop_iterate_single_oop_map<T>(closure, obj, klute.ik_omb_offset_2() * sizeof(T), klute.ik_omb_count_2());
+      }
+    }
   } else {
     // Fall back to normal iteration: read OopMapBlocks from Klass
     InstanceKlass* const this_ik = InstanceKlass::cast(CompressedKlassPointers::decode(nk));
@@ -258,12 +232,18 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate(narrowKlass nk, KlassLUTEntry k
 
 // Iterate over all oop fields in the oop maps (no metadata traversal)
 template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_reverse(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj) {
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_reverse(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
   assert(!Devirtualizer::do_metadata(closure),
       "Code to handle metadata is not implemented");
 
   if (klute.ik_carries_infos()) {
-    oop_oop_iterate_over_klute_oop_maps_reverse<T, OopClosureType>(klute, closure, obj);
+    // klute may encode 0, 1 or 2 oop maps. Iterate those (reversely).
+    if (klute.ik_omb_count_1() > 0) {
+      if (klute.ik_omb_count_2() > 0) {
+        oop_oop_iterate_single_oop_map_reverse<T>(closure, obj, klute.ik_omb_offset_2() * sizeof(T), klute.ik_omb_count_2());
+      }
+      oop_oop_iterate_single_oop_map_reverse<T>(closure, obj, klute.ik_omb_offset_1() * sizeof(T), klute.ik_omb_count_1());
+    }
   } else {
     // Fall back to normal iteration: read OopMapBlocks from Klass
     InstanceKlass* const this_ik = InstanceKlass::cast(CompressedKlassPointers::decode(nk));
@@ -274,7 +254,7 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_reverse(narrowKlass nk, KlassLU
 
 // Iterate over all oop fields and metadata.
 template <typename T, class OopClosureType>
-ALWAYSINLINE void InstanceKlass::oop_oop_iterate_bounded(narrowKlass nk, KlassLUTEntry klute, OopClosureType* closure, oop obj, MemRegion mr) {
+ALWAYSINLINE void InstanceKlass::oop_oop_iterate_bounded(OopClosureType* closure, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
   if (Devirtualizer::do_metadata(closure)) {
     if (mr.contains(obj)) {
       Devirtualizer::do_klute(closure, nk, klute);
@@ -282,7 +262,13 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_bounded(narrowKlass nk, KlassLU
   }
 
   if (klute.ik_carries_infos()) {
-    oop_oop_iterate_over_klute_oop_maps_bounded<T, OopClosureType>(klute, closure, obj, mr);
+    // klute may encode 0, 1 or 2 oop maps. Iterate those (bounded).
+    if (klute.ik_omb_count_1() > 0) {
+      oop_oop_iterate_single_oop_map_bounded<T>(closure, obj, mr, klute.ik_omb_offset_1() * sizeof(T), klute.ik_omb_count_1());
+      if (klute.ik_omb_count_2() > 0) {
+        oop_oop_iterate_single_oop_map_bounded<T>(closure, obj, mr, klute.ik_omb_offset_2() * sizeof(T), klute.ik_omb_count_2());
+      }
+    }
   } else {
     InstanceKlass* const this_ik = InstanceKlass::cast(CompressedKlassPointers::decode(nk));
     assert(this_ik == obj->klass(), "sanity");

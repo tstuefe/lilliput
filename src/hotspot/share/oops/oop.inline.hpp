@@ -437,7 +437,7 @@ void oopDesc::oop_iterate(OopClosureType* cl) {
   if (UseKLUT) {
     const narrowKlass nk = mark().narrow_klass();
     const KlassLUTEntry klute = KlassInfoLUT::get_entry(nk);
-    OopIteratorClosureDispatch::oop_oop_iterate(nk, klute, cl, this);
+    OopIteratorClosureDispatch::oop_oop_iterate(cl, this, klute, nk);
     return;
   }
 
@@ -450,7 +450,7 @@ void oopDesc::oop_iterate(OopClosureType* cl, MemRegion mr) {
   if (UseKLUT) {
     const narrowKlass nk = mark().narrow_klass();
     const KlassLUTEntry klute = KlassInfoLUT::get_entry(nk);
-    OopIteratorClosureDispatch::oop_oop_iterate_bounded(nk, klute, cl, this, mr);
+    OopIteratorClosureDispatch::oop_oop_iterate_bounded(cl, this, mr, klute, nk);
     return;
   }
 
@@ -463,7 +463,7 @@ size_t oopDesc::oop_iterate_size(OopClosureType* cl) {
   if (UseKLUT) {
     const narrowKlass nk = mark().narrow_klass();
     const KlassLUTEntry klute = KlassInfoLUT::get_entry(nk);
-    return OopIteratorClosureDispatch::oop_oop_iterate_size(nk, klute, cl, this);
+    return OopIteratorClosureDispatch::oop_oop_iterate_size(cl, this, klute, nk);
   }
 
   Klass* k = klass();
@@ -478,7 +478,7 @@ size_t oopDesc::oop_iterate_size(OopClosureType* cl, MemRegion mr) {
   if (UseKLUT) {
     const narrowKlass nk = mark().narrow_klass();
     const KlassLUTEntry klute = KlassInfoLUT::get_entry(nk);
-    return OopIteratorClosureDispatch::oop_oop_iterate_bounded_size(nk, klute, cl, this, mr);
+    return OopIteratorClosureDispatch::oop_oop_iterate_bounded_size(cl, this, mr, klute, nk);
   }
 
   Klass* k = klass();
@@ -502,7 +502,7 @@ void oopDesc::oop_iterate_backwards(OopClosureType* cl, Klass* k) {
     const narrowKlass nk = CompressedKlassPointers::encode_not_null(k);
     const KlassLUTEntry klute = KlassInfoLUT::get_entry(nk);
     if (!klute.is_type_array()) { // no need to iterate TAK
-      OopIteratorClosureDispatch::oop_oop_iterate_reverse(nk, klute, cl, this);
+      OopIteratorClosureDispatch::oop_oop_iterate_reverse(cl, this, klute, nk);
     }
     return;
   }
