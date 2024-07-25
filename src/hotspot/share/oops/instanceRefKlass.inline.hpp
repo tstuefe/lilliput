@@ -171,22 +171,22 @@ void InstanceRefKlass::oop_oop_iterate_bounded(oop obj, OopClosureType* closure,
 
 // klute variants
 template <typename T, class OopClosureType>
-void InstanceRefKlass::oop_oop_iterate(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
-  InstanceKlass::oop_oop_iterate<T>(closure, obj, klute, nk);
+void InstanceRefKlass::oop_oop_iterate(oop obj, OopClosureType* closure, KlassLUTEntry klute, narrowKlass nk) {
+  InstanceKlass::oop_oop_iterate<T>(obj, closure, klute, nk);
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate_ref_processing<T>(obj, closure);
 }
 
 template <typename T, class OopClosureType>
-void InstanceRefKlass::oop_oop_iterate_reverse(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
-  InstanceKlass::oop_oop_iterate_reverse<T>(closure, obj, klute, nk);
+void InstanceRefKlass::oop_oop_iterate_reverse(oop obj, OopClosureType* closure, KlassLUTEntry klute, narrowKlass nk) {
+  InstanceKlass::oop_oop_iterate_reverse<T>(obj, closure, klute, nk);
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate_ref_processing<T>(obj, closure);
 }
 
 template <typename T, class OopClosureType>
-void InstanceRefKlass::oop_oop_iterate_bounded(OopClosureType* closure, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
-  InstanceKlass::oop_oop_iterate_bounded<T>(closure, obj, mr, klute, nk);
+void InstanceRefKlass::oop_oop_iterate_bounded(oop obj, OopClosureType* closure, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
+  InstanceKlass::oop_oop_iterate_bounded<T>(obj, closure, mr, klute, nk);
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate_ref_processing_bounded<T>(obj, closure, mr);
 }

@@ -101,19 +101,19 @@ void ObjArrayKlass::oop_oop_iterate_bounded(oop obj, OopClosureType* closure, Me
 
 // Klute variants
 template <typename T, typename OopClosureType>
-void ObjArrayKlass::oop_oop_iterate(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
+void ObjArrayKlass::oop_oop_iterate(oop obj, OopClosureType* closure, KlassLUTEntry klute, narrowKlass nk) {
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate<T>(obj, closure);
 }
 
 template <typename T, typename OopClosureType>
-void ObjArrayKlass::oop_oop_iterate_bounded(OopClosureType* closure, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
+void ObjArrayKlass::oop_oop_iterate_bounded(oop obj, OopClosureType* closure, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate_bounded<T>(obj, closure, mr);
 }
 
 template <typename T, typename OopClosureType>
-void ObjArrayKlass::oop_oop_iterate_reverse(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
+void ObjArrayKlass::oop_oop_iterate_reverse(oop obj, OopClosureType* closure, KlassLUTEntry klute, narrowKlass nk) {
   // Todo: for now just resolve the Klass. Maybe more parts can be made static.
   narrow_klass_to_klass(nk)->oop_oop_iterate_reverse<T>(obj, closure);
 }

@@ -83,20 +83,20 @@ inline void InstanceClassLoaderKlass::oop_oop_iterate_bounded(oop obj, OopClosur
 // External entries implementation: klute variants
 
 template <typename T, class OopClosureType>
-inline void InstanceClassLoaderKlass::oop_oop_iterate(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
-  InstanceKlass::oop_oop_iterate<T>(closure, obj, klute, nk);
+inline void InstanceClassLoaderKlass::oop_oop_iterate(oop obj, OopClosureType* closure, KlassLUTEntry klute, narrowKlass nk) {
+  InstanceKlass::oop_oop_iterate<T>(obj, closure, klute, nk);
   oop_oop_iterate_metadata<T>(obj, closure);
 }
 
 template <typename T, class OopClosureType>
-inline void InstanceClassLoaderKlass::oop_oop_iterate_reverse(OopClosureType* closure, oop obj, KlassLUTEntry klute, narrowKlass nk) {
-  InstanceKlass::oop_oop_iterate_reverse<T>(closure, obj, klute, nk);
+inline void InstanceClassLoaderKlass::oop_oop_iterate_reverse(oop obj, OopClosureType* closure, KlassLUTEntry klute, narrowKlass nk) {
+  InstanceKlass::oop_oop_iterate_reverse<T>(obj, closure, klute, nk);
   NO_METADATA_ITERATION
 }
 
 template <typename T, class OopClosureType>
-inline void InstanceClassLoaderKlass::oop_oop_iterate_bounded(OopClosureType* closure, oop obj, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
-  InstanceKlass::oop_oop_iterate_bounded<T>(closure, obj, mr, klute, nk);
+inline void InstanceClassLoaderKlass::oop_oop_iterate_bounded(oop obj, OopClosureType* closure, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
+  InstanceKlass::oop_oop_iterate_bounded<T>(obj, closure, mr, klute, nk);
   oop_oop_iterate_metadata_bounded<T>(obj, closure, mr);
 }
 
