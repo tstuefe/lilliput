@@ -73,10 +73,12 @@ class ClassLoaderMetaspace : public CHeapObj<mtClass> {
   // Arena for allocations from class space
   //  (null if -XX:-UseCompressedClassPointers).
   metaspace::MetaspaceArena* _class_space_arena;
+  metaspace::MetaspaceArena* _class_space_arena_2;
 
   Mutex* lock() const                             { return _lock; }
   metaspace::MetaspaceArena* non_class_space_arena() const   { return _non_class_space_arena; }
   metaspace::MetaspaceArena* class_space_arena() const       { return _class_space_arena; }
+  metaspace::MetaspaceArena* class_space_arena_2() const       { return _class_space_arena_2; }
 
   bool have_class_space_arena() const { return _class_space_arena != nullptr; }
 
@@ -93,7 +95,7 @@ public:
   Metaspace::MetaspaceType space_type() const { return _space_type; }
 
   // Allocate word_size words from Metaspace.
-  MetaWord* allocate(size_t word_size, Metaspace::MetadataType mdType);
+  MetaWord* allocate(size_t word_size, Metaspace::MetadataType mdType, bool placement_hint = false);
 
   // Attempt to expand the GC threshold to be good for at least another word_size words
   // and allocate. Returns null if failure. Used during Metaspace GC.

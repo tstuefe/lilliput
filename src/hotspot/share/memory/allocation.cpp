@@ -75,7 +75,7 @@ void* MetaspaceObj::operator new(size_t size, ClassLoaderData* loader_data,
                                  size_t word_size,
                                  MetaspaceObj::Type type, TRAPS) throw() {
   // Klass has its own operator new
-  return Metaspace::allocate(loader_data, word_size, type, THREAD);
+  return Metaspace::allocate(loader_data, word_size, type, false, THREAD);
 }
 
 void* MetaspaceObj::operator new(size_t size, ClassLoaderData* loader_data,

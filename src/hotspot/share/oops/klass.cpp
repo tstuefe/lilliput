@@ -248,10 +248,8 @@ Method* Klass::uncached_lookup_method(const Symbol* name, const Symbol* signatur
   return nullptr;
 }
 
-void* Klass::operator new(size_t size, ClassLoaderData* loader_data, size_t word_size, TRAPS) throw() {
-  void* const k = Metaspace::allocate(loader_data, word_size, MetaspaceObj::ClassType, THREAD);
-  log_debug(metaspace)("Returning new Klass*=" INTPTR_FORMAT ", nKlass=%u, word size=%zx",
-                        p2i(k), CompressedKlassPointers::encode((Klass*)k), word_size);
+void* Klass::operator new(size_t size, ClassLoaderData* loader_data, size_t word_size, bool placement_hint, TRAPS) throw() {
+  void* const k = Metaspace::allocate(loader_data, word_size, MetaspaceObj::ClassType, placement_hint, THREAD);
   return k;
 }
 

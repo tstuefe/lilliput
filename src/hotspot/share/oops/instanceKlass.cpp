@@ -448,28 +448,38 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(const ClassFileParser& par
 
   InstanceKlass* ik;
 
+  const bool placement_hint = parser.is_interface() || parser.is_abstract();
+
   // Allocation
   if (parser.is_instance_ref_klass()) {
     // java.lang.ref.Reference
-    ik = new (loader_data, size, THREAD) InstanceRefKlass(parser);
+    ik = new (loader_data, size, placement_hint, THREAD) InstanceRefKlass(parser);
   } else if (class_name == vmSymbols::java_lang_Class()) {
     // mirror - java.lang.Class
-    ik = new (loader_data, size, THREAD) InstanceMirrorKlass(parser);
+    ik = new (loader_data, size, placement_hint, THREAD) InstanceMirrorKlass(parser);
   } else if (is_stack_chunk_class(class_name, loader_data)) {
     // stack chunk
-    ik = new (loader_data, size, THREAD) InstanceStackChunkKlass(parser);
+    ik = new (loader_data, size, placement_hint, THREAD) InstanceStackChunkKlass(parser);
   } else if (is_class_loader(class_name, parser)) {
     // class loader - java.lang.ClassLoader
-    ik = new (loader_data, size, THREAD) InstanceClassLoaderKlass(parser);
+    ik = new (loader_data, size, placement_hint, THREAD) InstanceClassLoaderKlass(parser);
   } else {
     // normal
-    ik = new (loader_data, size, THREAD) InstanceKlass(parser);
+    ik = new (loader_data, size, placement_hint, THREAD) InstanceKlass(parser);
   }
 
   // Check for pending exception before adding to the loader data and incrementing
   // class count.  Can get OOM here.
   if (HAS_PENDING_EXCEPTION) {
     return nullptr;
+  }
+
+  {
+    char tmp[1024];
+    log_debug(metaspace)("Returning new IK @" PTR_FORMAT " for %s (placement_hint: %d), nKlass=%u, word size=%d",
+                          p2i(ik),
+                          parser.class_name()->as_C_string(tmp, sizeof(tmp)), placement_hint,
+                          CompressedKlassPointers::encode(ik), size);
   }
 
   return ik;

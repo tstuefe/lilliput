@@ -68,7 +68,8 @@ ClassLoaderMetaspace::ClassLoaderMetaspace(Mutex* lock, Metaspace::MetaspaceType
   _lock(lock),
   _space_type(space_type),
   _non_class_space_arena(nullptr),
-  _class_space_arena(nullptr)
+  _class_space_arena(nullptr),
+  _class_space_arena_2(nullptr)
 {
   // Initialize non-class Arena
   _non_class_space_arena = new MetaspaceArena(
@@ -84,9 +85,16 @@ ClassLoaderMetaspace::ClassLoaderMetaspace(Mutex* lock, Metaspace::MetaspaceType
         ArenaGrowthPolicy::policy_for_space_type(space_type, true),
         klass_alignment_words,
         "class arena");
+    if (UseKLUT && space_type == Metaspace::BootMetaspaceType) {
+      _class_space_arena_2 = new MetaspaceArena(
+          class_context,
+          ArenaGrowthPolicy::policy_for_space_type(space_type, true),
+          klass_alignment_words,
+          "class arena 2");
+    }
   }
 
-  UL2(debug, "born (nonclass arena: " PTR_FORMAT ", class arena: " PTR_FORMAT ".",
+  UL2(debug, "born (nonclass arena: " PTR_FORMAT ", class arena: " PTR_FORMAT ").",
       p2i(_non_class_space_arena), p2i(_class_space_arena));
 }
 
@@ -95,18 +103,20 @@ ClassLoaderMetaspace::~ClassLoaderMetaspace() {
   MutexLocker fcl(lock(), Mutex::_no_safepoint_check_flag);
   delete _non_class_space_arena;
   delete _class_space_arena;
+  delete _class_space_arena_2;
 
 }
 
 // Allocate word_size words from Metaspace.
-MetaWord* ClassLoaderMetaspace::allocate(size_t word_size, Metaspace::MetadataType mdType) {
+MetaWord* ClassLoaderMetaspace::allocate(size_t word_size, Metaspace::MetadataType mdType, bool placement_hint) {
   word_size = align_up(word_size, Metaspace::min_allocation_word_size);
   MutexLocker fcl(lock(), Mutex::_no_safepoint_check_flag);
   MetaBlock result, wastage;
   const bool is_class = have_class_space_arena() && mdType == Metaspace::ClassType;
   if (is_class) {
     assert(word_size >= (sizeof(Klass)/BytesPerWord), "weird size for klass: %zu", word_size);
-    result = class_space_arena()->allocate(word_size, wastage);
+    MetaspaceArena* const arena = (placement_hint && class_space_arena_2() != nullptr) ? class_space_arena_2() : class_space_arena();
+    result = arena->allocate(word_size, wastage);
   } else {
     result = non_class_space_arena()->allocate(word_size, wastage);
   }
@@ -116,9 +126,10 @@ MetaWord* ClassLoaderMetaspace::allocate(size_t word_size, Metaspace::MetadataTy
 #ifdef ASSERT
   if (result.is_nonempty()) {
     const bool in_class_arena = class_space_arena() != nullptr ? class_space_arena()->contains(result) : false;
+    const bool in_class_arena2 = class_space_arena_2() != nullptr ? class_space_arena_2()->contains(result) : false;
     const bool in_nonclass_arena = non_class_space_arena()->contains(result);
-    assert((is_class && in_class_arena) || (!is_class && in_class_arena != in_nonclass_arena),
-           "block from neither arena " METABLOCKFORMAT "?", METABLOCKFORMATARGS(result));
+    assert(!is_class || (in_class_arena2 || in_class_arena),
+             "block from neither arena " METABLOCKFORMAT "?", METABLOCKFORMATARGS(result));
   }
 #endif
   return result.base();
@@ -182,6 +193,9 @@ void ClassLoaderMetaspace::add_to_statistics(metaspace::ClmsStats* out) const {
   if (class_space_arena() != nullptr) {
     class_space_arena()->add_to_statistics(&out->_arena_stats_class);
   }
+  if (class_space_arena_2() != nullptr) {
+    class_space_arena_2()->add_to_statistics(&out->_arena_stats_class);
+  }
 }
 
 #ifdef ASSERT
@@ -192,6 +206,9 @@ void ClassLoaderMetaspace::verify() const {
   }
   if (class_space_arena() != nullptr) {
     class_space_arena()->verify();
+  }
+  if (class_space_arena_2() != nullptr) {
+    class_space_arena_2()->verify();
   }
 }
 #endif // ASSERT

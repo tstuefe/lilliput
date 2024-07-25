@@ -852,7 +852,7 @@ size_t Metaspace::max_allocation_word_size() {
 // is suitable for calling from non-Java threads.
 // Callers are responsible for checking null.
 MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
-                              MetaspaceObj::Type type) {
+                              MetaspaceObj::Type type, bool placement_hint) {
   assert(word_size <= Metaspace::max_allocation_word_size(),
          "allocation size too large (" SIZE_FORMAT ")", word_size);
 
@@ -865,7 +865,7 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
   MetadataType mdtype = (type == MetaspaceObj::ClassType) ? ClassType : NonClassType;
 
   // Try to allocate metadata.
-  MetaWord* result = loader_data->metaspace_non_null()->allocate(word_size, mdtype);
+  MetaWord* result = loader_data->metaspace_non_null()->allocate(word_size, mdtype, placement_hint);
 
   if (result != nullptr) {
 #ifdef ASSERT
@@ -886,7 +886,7 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
 }
 
 MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
-                              MetaspaceObj::Type type, TRAPS) {
+                              MetaspaceObj::Type type, bool placement_hint, TRAPS) {
 
   if (HAS_PENDING_EXCEPTION) {
     assert(false, "Should not allocate with exception pending");
@@ -894,7 +894,7 @@ MetaWord* Metaspace::allocate(ClassLoaderData* loader_data, size_t word_size,
   }
   assert(!THREAD->owns_locks(), "allocating metaspace while holding mutex");
 
-  MetaWord* result = allocate(loader_data, word_size, type);
+  MetaWord* result = allocate(loader_data, word_size, type, placement_hint);
 
   if (result == nullptr) {
     MetadataType mdtype = (type == MetaspaceObj::ClassType) ? ClassType : NonClassType;

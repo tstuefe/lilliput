@@ -119,12 +119,12 @@ public:
   static constexpr size_t min_allocation_word_size = min_allocation_alignment_words;
 
   static MetaWord* allocate(ClassLoaderData* loader_data, size_t word_size,
-                            MetaspaceObj::Type type, TRAPS);
+                            MetaspaceObj::Type type, bool placement_hint, TRAPS);
 
   // Non-TRAPS version of allocate which can be called by a non-Java thread, that returns
   // null on failure.
   static MetaWord* allocate(ClassLoaderData* loader_data, size_t word_size,
-                            MetaspaceObj::Type type);
+                            MetaspaceObj::Type type, bool placement_hint = false);
 
   static bool contains(const void* ptr) {
     return is_in_shared_metaspace(ptr) || // in cds

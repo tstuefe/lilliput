@@ -79,7 +79,16 @@ TypeArrayKlass* TypeArrayKlass::allocate(ClassLoaderData* loader_data, BasicType
 
   int size = ArrayKlass::static_size(TypeArrayKlass::header_size());
 
-  return new (loader_data, size, THREAD) TypeArrayKlass(type, name);
+  TypeArrayKlass* const tak = new (loader_data, size, false, THREAD) TypeArrayKlass(type, name);
+
+  {
+    char tmp[1024];
+    log_debug(metaspace)("Returning new OAK @" PTR_FORMAT " for %s, nKlass=%u, word size=%d",
+                          p2i(tak),
+                          tak->name()->as_C_string(tmp, sizeof(tmp)),
+                          CompressedKlassPointers::encode(tak), size);
+  }
+  return tak;
 }
 
 TypeArrayKlass::TypeArrayKlass(BasicType type, Symbol* name) : ArrayKlass(name, Kind) {

@@ -241,7 +241,7 @@ protected:
   Klass(KlassKind kind);
   Klass();
 
-  void* operator new(size_t size, ClassLoaderData* loader_data, size_t word_size, TRAPS) throw();
+  void* operator new(size_t size, ClassLoaderData* loader_data, size_t word_size, bool placement_hint, TRAPS) throw();
 
  public:
   int kind() const { return _kind; }
