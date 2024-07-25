@@ -72,6 +72,9 @@ void KlassInfoLUT::register_klass(const Klass* k) {
   case Klass::ObjArrayKlassKind:             inc_registered_OAK(); break;
   default: ShouldNotReachHere();
   };
+  if (k->is_abstract() || k->is_interface()) {
+    inc_registered_IK_for_abstract_or_interface();
+  }
 #endif
 }
 

@@ -57,6 +57,7 @@ class KlassInfoLUT : public AllStatic {
   f(registered_ISCK)   \
   f(registered_TAK)    \
   f(registered_OAK)    \
+  f(registered_IK_for_abstract_or_interface) \
   f(hits_IK)           \
   f(hits_IRK)          \
   f(hits_IMK)          \
