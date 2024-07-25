@@ -72,12 +72,24 @@ inline unsigned KlassLUTEntry::ik_omb_offset_2() const {
 // calculates word size given header size, element size, and array length
 inline unsigned KlassLUTEntry::ak_calculate_wordsize_given_oop(oop obj) const {
   assert(is_array(), "only for ak entries");
+  assert(UseCompactObjectHeaders, "+COH only");
+  assert(UseKLUT, "+KLUT only");
+
   // See oopDesc::size_given_klass
   const unsigned l2esz = ak_layouthelper_esz();
   const unsigned hsz = ak_layouthelper_hsz();
-  const size_t array_length = (size_t) ((arrayOop)obj)->length();
+
+  // In +COH, array length is always at offset 8
+  STATIC_ASSERT(sizeof(markWord) == 8);
+  const int* const array_len_addr = (int*)(obj->field_addr<int>(8));
+  const size_t array_length = (size_t) (*array_len_addr);
   const size_t size_in_bytes = (array_length << l2esz) + hsz;
-  return align_up(size_in_bytes, MinObjAlignmentInBytes) / HeapWordSize;
+
+  // Note: for UseKLUT, we require a standard object alignment (see argument.cpp)
+  constexpr int HardCodedObjectAlignmentInBytes = BytesPerWord;
+  assert(MinObjAlignmentInBytes == HardCodedObjectAlignmentInBytes, "Sanity");
+
+  return align_up(size_in_bytes, HardCodedObjectAlignmentInBytes) / HeapWordSize;
 }
 
 inline unsigned KlassLUTEntry::calculate_wordsize_given_oop(oop obj) const {

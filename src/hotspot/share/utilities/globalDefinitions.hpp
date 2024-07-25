@@ -283,7 +283,7 @@ class MetaWordImpl;             // Opaque, never defined.
 typedef MetaWordImpl* MetaWord;
 
 // HeapWordSize must be 2^LogHeapWordSize.
-const int HeapWordSize        = sizeof(HeapWord);
+constexpr int HeapWordSize        = sizeof(HeapWord);
 #ifdef _LP64
 const int LogHeapWordSize     = 3;
 #else

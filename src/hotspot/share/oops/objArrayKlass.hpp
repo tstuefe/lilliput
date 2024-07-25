@@ -38,7 +38,7 @@ class ObjArrayKlass : public ArrayKlass {
   friend class JVMCIVMStructs;
 
  public:
-  static const KlassKind Kind = ObjArrayKlassKind;
+  static constexpr KlassKind Kind = ObjArrayKlassKind;
 
  private:
   // If you add a new field that points to any metaspace object, you

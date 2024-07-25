@@ -140,7 +140,7 @@ class InstanceKlass: public Klass {
   friend class CompileReplay;
 
  public:
-  static const KlassKind Kind = InstanceKlassKind;
+  static constexpr KlassKind Kind = InstanceKlassKind;
 
  protected:
   InstanceKlass(const ClassFileParser& parser, KlassKind kind = Kind, ReferenceType reference_type = REF_NONE);

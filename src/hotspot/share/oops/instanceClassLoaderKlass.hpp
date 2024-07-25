@@ -41,7 +41,7 @@ class InstanceClassLoaderKlass: public InstanceKlass {
   friend class VMStructs;
   friend class InstanceKlass;
 public:
-  static const KlassKind Kind = InstanceClassLoaderKlassKind;
+  static constexpr KlassKind Kind = InstanceClassLoaderKlassKind;
 
 private:
   InstanceClassLoaderKlass(const ClassFileParser& parser) : InstanceKlass(parser, Kind) {}

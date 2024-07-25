@@ -106,7 +106,7 @@ class InstanceStackChunkKlass: public InstanceKlass {
   friend class Continuations;
 
 public:
-  static const KlassKind Kind = InstanceStackChunkKlassKind;
+  static constexpr KlassKind Kind = InstanceStackChunkKlassKind;
 
 private:
   static int _offset_of_stack;

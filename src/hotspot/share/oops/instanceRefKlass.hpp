@@ -51,7 +51,7 @@ class ClassFileParser;
 class InstanceRefKlass: public InstanceKlass {
   friend class InstanceKlass;
  public:
-  static const KlassKind Kind = InstanceRefKlassKind;
+  static constexpr KlassKind Kind = InstanceRefKlassKind;
 
  private:
   InstanceRefKlass(const ClassFileParser& parser);

@@ -448,24 +448,33 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(const ClassFileParser& par
 
   InstanceKlass* ik;
 
-  const bool placement_hint = parser.is_interface() || parser.is_abstract();
+  // In Class space, we segregate Klass allocations for:
+  // - non-instantiable classes
+  // - larger Klass structures
+  // to keep the narrowKlass values for normal classes together.
+  bool segregate = false;
+  if (UseKLUT) {
+    const bool can_be_instantiated = parser.is_interface() || parser.is_abstract();
+    const bool kinda_large = (size >= (CompressedKlassPointers::klass_alignment_in_words() * 2));
+    segregate = can_be_instantiated || kinda_large;
+  }
 
   // Allocation
   if (parser.is_instance_ref_klass()) {
     // java.lang.ref.Reference
-    ik = new (loader_data, size, placement_hint, THREAD) InstanceRefKlass(parser);
+    ik = new (loader_data, size, segregate, THREAD) InstanceRefKlass(parser);
   } else if (class_name == vmSymbols::java_lang_Class()) {
     // mirror - java.lang.Class
-    ik = new (loader_data, size, placement_hint, THREAD) InstanceMirrorKlass(parser);
+    ik = new (loader_data, size, segregate, THREAD) InstanceMirrorKlass(parser);
   } else if (is_stack_chunk_class(class_name, loader_data)) {
     // stack chunk
-    ik = new (loader_data, size, placement_hint, THREAD) InstanceStackChunkKlass(parser);
+    ik = new (loader_data, size, segregate, THREAD) InstanceStackChunkKlass(parser);
   } else if (is_class_loader(class_name, parser)) {
     // class loader - java.lang.ClassLoader
-    ik = new (loader_data, size, placement_hint, THREAD) InstanceClassLoaderKlass(parser);
+    ik = new (loader_data, size, segregate, THREAD) InstanceClassLoaderKlass(parser);
   } else {
     // normal
-    ik = new (loader_data, size, placement_hint, THREAD) InstanceKlass(parser);
+    ik = new (loader_data, size, segregate, THREAD) InstanceKlass(parser);
   }
 
   // Check for pending exception before adding to the loader data and incrementing
@@ -478,7 +487,7 @@ InstanceKlass* InstanceKlass::allocate_instance_klass(const ClassFileParser& par
     char tmp[1024];
     log_debug(metaspace)("Returning new IK @" PTR_FORMAT " for %s (placement_hint: %d), nKlass=%u, word size=%d",
                           p2i(ik),
-                          parser.class_name()->as_C_string(tmp, sizeof(tmp)), placement_hint,
+                          parser.class_name()->as_C_string(tmp, sizeof(tmp)), segregate,
                           CompressedKlassPointers::encode(ik), size);
   }
 

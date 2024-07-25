@@ -2958,6 +2958,10 @@ jint Arguments::finalize_vm_init_args(bool patch_mod_javabase) {
   if (!UseCompactObjectHeaders) {
     FLAG_SET_DEFAULT(UseKLUT, false);
   }
+  if (ObjectAlignmentInBytes != BytesPerWord) {
+    warning("UseKLUT requires default object alignment.");
+    FLAG_SET_DEFAULT(UseKLUT, false);
+  }
 #endif
 
   return JNI_OK;
