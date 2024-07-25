@@ -100,7 +100,12 @@ ALL_KLASS_KINDS_DO(XX)
 #undef XX
    0;
 #define PERCENTAGE_OF(x, x100) ( ((double)x * 100.0f) / x100 )
-const uint64_t hits_ak = counter_hits_OAK + counter_hits_TAK;
+  const uint64_t registered_all =
+      counter_registered_ICLK + counter_registered_IK + counter_registered_IMK +
+      counter_registered_IRK + counter_registered_ISCK + counter_registered_OAK +
+      counter_registered_TAK;
+  st->print_cr("   Registered classes, total: " UINT64_FORMAT, registered_all);
+  const uint64_t hits_ak = counter_hits_OAK + counter_hits_TAK;
   const uint64_t hits_ik = hits - hits_ak;
   const uint64_t no_info_hits = counter_noinfo_ICLK + counter_noinfo_IMK + counter_noinfo_IK_other;
 
@@ -122,6 +127,28 @@ const uint64_t hits_ak = counter_hits_OAK + counter_hits_TAK;
   st->print("   Hits of bootloaded Klass: ");
   st->fill_to(22);
   st->print_cr(UINT64_FORMAT " (%.1f%%)", counter_hits_bootloaded, PERCENTAGE_OF(counter_hits_bootloaded, hits));
+
+  // Count hit density per cacheline (How well are narrow Klass IDs clustered to give us good local density
+  constexpr int chacheline_size = 64;
+  constexpr int slots_per_cacheline = chacheline_size / sizeof(KlassLUTEntry);
+  const int num_cachelines = num_entries() / slots_per_cacheline;
+  int valid_hits_per_cacheline_distribution[slots_per_cacheline + 1] = { 0 };
+  for (int i = 0; i < num_cachelines; i++) {
+    int n = 0;
+    for (int j = 0; j < slots_per_cacheline; j++) {
+      KlassLUTEntry e(at((i * slots_per_cacheline) + j));
+      const bool valid = !e.is_invalid() && (e.is_array() || e.ik_carries_infos());
+      if (valid) {
+        n++;
+      }
+    }
+    assert(n <= slots_per_cacheline, "Sanity");
+    valid_hits_per_cacheline_distribution[n]++;
+  }
+  st->print_cr("LUT valid hit density over cacheline size:");
+  for (int i = 0; i <= slots_per_cacheline; i++) {
+    st->print_cr("%d valid entries per cacheline: %d", i, valid_hits_per_cacheline_distribution[i]);
+  }
 }
 
 #ifdef KLUT_ENABLE_EXPENSIVE_STATS
