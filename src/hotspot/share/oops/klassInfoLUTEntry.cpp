@@ -282,3 +282,10 @@ void KlassLUTEntry::verify_against(const Klass* k) const {
 KlassLUTEntry::KlassLUTEntry(const Klass* k) : _v(build_from(k)) {
 }
 
+// Helper function, prints current limits
+void KlassLUTEntry::print_limits(outputStream* st) {
+  st->print_cr("IKE Limits: instance byte size %zu, omb1 count: %zu, omb1 byte offset: %zu, omb2 oop count: %zu, omb2 byte offset: %zu",
+               ik_wordsize_limit * BytesPerWord,
+               ik_omb_count_1_limit, ik_omb_offset_1_limit * BytesPerHeapOop,
+               ik_omb_count_2_limit, ik_omb_offset_2_limit * BytesPerHeapOop);
+}

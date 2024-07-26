@@ -152,6 +152,8 @@ ALL_KLASS_KINDS_DO(XX)
   for (int i = 0; i <= slots_per_cacheline; i++) {
     st->print_cr("%d valid entries per cacheline: %d", i, valid_hits_per_cacheline_distribution[i]);
   }
+  // Just for info, print limits
+  KlassLUTEntry::print_limits(st);
 }
 
 #ifdef KLUT_ENABLE_EXPENSIVE_STATS

@@ -229,6 +229,9 @@ public:
   // calculates word size given header size, element size, and array length
   inline unsigned ak_calculate_wordsize_given_oop(oop obj) const;
 
+  // Helper function, prints current limits
+  static void print_limits(outputStream* st);
+
 }; // KlassInfoLUEntryIK
 
 #endif // SHARE_OOPS_KLASSINFOLUTENTRY_HPP
