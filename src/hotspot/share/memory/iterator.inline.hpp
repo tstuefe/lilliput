@@ -505,12 +505,13 @@ DEFINE_DISPATCH_CLASS_RETURN_OBJ_SIZE(
     (obj, cl, klute, nk)
 )
 
+/*
 DEFINE_DISPATCH_CLASS_RETURN_OBJ_SIZE(
     OopOopIterateDispatchWithKluteReverseReturnSize,
     oop_oop_iterate_reverse,
     (oop obj, OopClosureType* cl, KlassLUTEntry klute, narrowKlass nk),
     (obj, cl, klute, nk)
-)
+)*/
 
 DEFINE_DISPATCH_CLASS_RETURN_OBJ_SIZE(
     OopOopIterateDispatchWithKluteBoundedReturnSize,

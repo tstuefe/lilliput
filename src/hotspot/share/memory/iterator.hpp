@@ -324,7 +324,6 @@ class OopIteratorClosureDispatch {
   template <typename OopClosureType> static void oop_oop_iterate_reverse  (oop obj, OopClosureType* cl, KlassLUTEntry klute, narrowKlass nk);
   template <typename OopClosureType> static void oop_oop_iterate_bounded  (oop obj, OopClosureType* cl, MemRegion mr, KlassLUTEntry klute, narrowKlass nk);
   template <typename OopClosureType> static size_t oop_oop_iterate_size        (oop obj, OopClosureType* cl, KlassLUTEntry klute, narrowKlass nk);
-  template <typename OopClosureType> static size_t oop_oop_iterate_reverse_size(oop obj, OopClosureType* cl, KlassLUTEntry klute, narrowKlass nk);
   template <typename OopClosureType> static size_t oop_oop_iterate_bounded_size(oop obj, OopClosureType* cl, MemRegion mr, KlassLUTEntry klute, narrowKlass nk);
 
 };
