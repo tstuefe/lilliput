@@ -55,4 +55,9 @@ ALWAYSINLINE KlassLUTEntry KlassInfoLUT::get_entry(narrowKlass nk) {
   return e;
 }
 
+ALWAYSINLINE ClassLoaderData* KlassInfoLUT::get_perma_cld(int index) {
+  assert(index >= 1 && index <= 3, "Sanity");
+  return _common_loaders[index];
+}
+
 #endif // SHARE_OOPS_KLASSINFOLUT_INLINE_HPP

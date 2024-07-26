@@ -34,6 +34,7 @@
 #include "utilities/debug.hpp"
 #include "utilities/ostream.hpp"
 
+ClassLoaderData* KlassInfoLUT::_common_loaders[4] = { nullptr };
 uint32_t* KlassInfoLUT::_entries = nullptr;
 
 void KlassInfoLUT::initialize() {
@@ -45,6 +46,31 @@ void KlassInfoLUT::initialize() {
   for (unsigned i = 0; i < num_entries(); i++) {
     _entries[i] = KlassLUTEntry::invalid_entry;
   }
+}
+
+int KlassInfoLUT::try_register_perma_cld(ClassLoaderData* cld) {
+  int index = 0;
+  if (cld->is_permanent_class_loader_data()) {
+    if (cld->is_the_null_class_loader_data()) {
+      index = 1;
+    } else if (cld->is_system_class_loader_data()) {
+      index = 2;
+    } else if (cld->is_platform_class_loader_data()) {
+      index = 3;
+    }
+  }
+  if (index > 0) {
+    ClassLoaderData* old_cld = Atomic::load(_common_loaders + index);
+    if (old_cld == nullptr) {
+      old_cld = Atomic::cmpxchg(&_common_loaders[index], (ClassLoaderData*)nullptr, cld);
+      if (old_cld == nullptr || old_cld == cld) {
+        return index;
+      }
+    } else if (old_cld == cld) {
+      return index;
+    }
+  }
+  return 0;
 }
 
 void KlassInfoLUT::register_klass(const Klass* k) {
@@ -91,34 +117,53 @@ STATS_DO(XX)
 void KlassInfoLUT::print_statistics(outputStream* st) {
   assert(UseKLUT, "?");
   st->print_cr("KLUT stats:");
-#define XX(xx)                                \
-  st->print("   " #xx ":");                   \
-  st->fill_to(22);                            \
-  st->print_cr(UINT64_FORMAT, counter_##xx);
-STATS_DO(XX)
+
+  const uint64_t registered_all =
+#define XX(name, shortname) counter_registered_##shortname +
+ALL_KLASS_KINDS_DO(XX)
 #undef XX
+   0;
+#define PERCENTAGE_OF(x, x100) ( ((double)x * 100.0f) / x100 )
+
   const uint64_t hits =
 #define XX(name, shortname) counter_hits_##shortname +
 ALL_KLASS_KINDS_DO(XX)
 #undef XX
    0;
 #define PERCENTAGE_OF(x, x100) ( ((double)x * 100.0f) / x100 )
-  const uint64_t registered_all =
-      counter_registered_ICLK + counter_registered_IK + counter_registered_IMK +
-      counter_registered_IRK + counter_registered_ISCK + counter_registered_OAK +
-      counter_registered_TAK;
+
+#define PRINT_WITH_PERCENTAGE(title, x, x100) \
+  st->print("   " title ": "); \
+  st->fill_to(24);             \
+  st->print_cr(" " UINT64_FORMAT " (%.2f%%)", x, PERCENTAGE_OF(x, x100));
+
   st->print_cr("   Registered classes, total: " UINT64_FORMAT, registered_all);
+#define XX(name, shortname) PRINT_WITH_PERCENTAGE("Registered, " #shortname, counter_registered_##shortname, hits);
+  ALL_KLASS_KINDS_DO(XX)
+#undef XX
+
+  const uint64_t registered_AK = counter_registered_OAK - counter_registered_TAK;
+  const uint64_t registered_IK = registered_all - registered_AK;
+  PRINT_WITH_PERCENTAGE("Registered classes, IK (all)", registered_IK, registered_all);
+  PRINT_WITH_PERCENTAGE("Registered classes, AK (all)", registered_AK, registered_all);
+
+  PRINT_WITH_PERCENTAGE("Registered classes, IK, for abstract/interface", counter_registered_IK_for_abstract_or_interface, registered_all);
+
+  st->print_cr("   Hits, total: " UINT64_FORMAT, hits);
+#define XX(name, shortname) PRINT_WITH_PERCENTAGE("Hits, " #shortname, counter_hits_##shortname, hits);
+  ALL_KLASS_KINDS_DO(XX)
+#undef XX
+
   const uint64_t hits_ak = counter_hits_OAK + counter_hits_TAK;
   const uint64_t hits_ik = hits - hits_ak;
+  PRINT_WITH_PERCENTAGE("Hits, IK (all)", hits_ik, hits);
+  PRINT_WITH_PERCENTAGE("Hits, AK (all)", hits_ak, hits);
+
+  PRINT_WITH_PERCENTAGE("Hits, all for bootloader", counter_hits_bootloader, hits);
+  PRINT_WITH_PERCENTAGE("Hits, all for systemloader", counter_hits_sysloader, hits);
+  PRINT_WITH_PERCENTAGE("Hits, all for platformloader", counter_hits_platformloader, hits);
+
   const uint64_t no_info_hits = counter_noinfo_ICLK + counter_noinfo_IMK + counter_noinfo_IK_other;
-
-  st->print("   IK hits total: ");
-  st->fill_to(22);
-  st->print_cr(UINT64_FORMAT " (%.1f%%)", hits_ik, PERCENTAGE_OF(hits_ik, hits));
-
-  st->print("   AK hits total: ");
-  st->fill_to(22);
-  st->print_cr(UINT64_FORMAT " (%.1f%%)", hits_ak, PERCENTAGE_OF(hits_ak, hits));
 
   st->print_cr("   IK details missing in %.2f%% of all IK hits (IMK: %.2f%%, ICLK: %.2f%%, other: %.2f%%)",
                PERCENTAGE_OF(no_info_hits, hits_ik),
@@ -126,10 +171,6 @@ ALL_KLASS_KINDS_DO(XX)
                PERCENTAGE_OF(counter_noinfo_ICLK, hits_ik),
                PERCENTAGE_OF(counter_noinfo_IK_other, hits_ik)
   );
-
-  st->print("   Hits of bootloaded Klass: ");
-  st->fill_to(22);
-  st->print_cr(UINT64_FORMAT " (%.1f%%)", counter_hits_bootloaded, PERCENTAGE_OF(counter_hits_bootloaded, hits));
 
   // Count hit density per cacheline (How well are narrow Klass IDs clustered to give us good local density
   constexpr int chacheline_size = 64;
@@ -171,9 +212,11 @@ void KlassInfoLUT::update_hit_stats(KlassLUTEntry klute) {
       default: inc_noinfo_IK_other(); break;
     }
   }
-  if (klute.bootloaded()) {
-    inc_hits_bootloaded();
-  }
+  switch (klute.loader_index()) {
+  case 1: inc_hits_bootloader(); break;
+  case 2: inc_hits_sysloader(); break;
+  case 3: inc_hits_platformloader(); break;
+  };
 }
 #endif // KLUT_ENABLE_EXPENSIVE_STATS
 

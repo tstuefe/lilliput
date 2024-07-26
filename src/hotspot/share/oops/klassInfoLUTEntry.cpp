@@ -28,6 +28,7 @@
 #include "memory/resourceArea.hpp"
 #include "oops/instanceKlass.inline.hpp"
 #include "oops/klass.inline.hpp"
+#include "oops/klassInfoLUT.hpp"
 #include "oops/klassInfoLUTEntry.inline.hpp"
 #include "utilities/debug.hpp"
 
@@ -62,14 +63,14 @@ uint32_t KlassLUTEntry::build_from_ik(const InstanceKlass* ik, const char*& not_
 
   const int kind = ik->kind();
   const int lh = ik->layout_helper();
-  const bool loaded_by_bootloader = ik->class_loader_data()->is_boot_class_loader_data();
+  const int loader_index = KlassInfoLUT::try_register_perma_cld(ik->class_loader_data());
 
   U value(0);
 
   // Set common bits, these are always present
   assert(kind < 0b111, "sanity");
   value.common.kind = kind;
-  value.common.bootloaded = loaded_by_bootloader ? 1 : 0;
+  value.common.loader = loader_index;
 
   // We may not be able to encode the IK-specific info; if we can't, those bits are left zero
   // and we return an error string for logging
@@ -144,14 +145,14 @@ uint32_t KlassLUTEntry::build_from_ak(const ArrayKlass* ak) {
 
   const int kind = ak->kind();
   const int lh = ak->layout_helper();
-  const bool loaded_by_bootloader = ak->class_loader_data()->is_boot_class_loader_data();
+  const int loader_index = KlassInfoLUT::try_register_perma_cld(ak->class_loader_data());
 
   assert(Klass::layout_helper_is_objArray(lh) || Klass::layout_helper_is_typeArray(lh), "unexpected");
 
   LayoutHelperHelper lhu = { (unsigned) lh };
   U value(0);
   value.common.kind = kind;
-  value.common.bootloaded = loaded_by_bootloader ? 1 : 0;
+  value.common.loader = loader_index;
   value.ake.lh_ebt = lhu.bytes.lh_ebt;
   value.ake.lh_esz = lhu.bytes.lh_esz;
   value.ake.lh_hsz = lhu.bytes.lh_hsz;
@@ -207,8 +208,14 @@ void KlassLUTEntry::verify_against(const Klass* k) const {
 
   assert(our_kind == real_kind, "kind mismatch (%d vs %d) (%x)", real_kind, our_kind, _v.raw);
 
-  const int real_loaded_by_bootloader = k->class_loader_data()->is_boot_class_loader_data();
-  assert(real_loaded_by_bootloader == bootloaded(), "Bootloaded? mismatch");
+  const ClassLoaderData* const real_cld = k->class_loader_data();
+  const unsigned loader = loader_index();
+  assert(loader < 4, "invalid loader index");
+  if (loader > 0) {
+    assert(KlassInfoLUT::get_perma_cld(loader) == real_cld, "Different CLD?");
+  } else {
+    assert(!real_cld->is_permanent_class_loader_data(), "perma cld?");
+  }
 
   if (k->is_array_klass()) {
 

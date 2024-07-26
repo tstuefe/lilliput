@@ -151,15 +151,6 @@ void Devirtualizer::do_cld(OopClosureType* closure, ClassLoaderData* cld) {
   call_do_cld(&OopClosureType::do_cld, &OopIterateClosure::do_cld, closure, cld);
 }
 
-template <typename OopClosureType>
-inline void Devirtualizer::do_klute(OopClosureType* closure, narrowKlass nk, KlassLUTEntry klute) {
-  ClassLoaderData* const cld =
-      klute.bootloaded() ?
-      ClassLoaderData::the_null_class_loader_data() :
-      CompressedKlassPointers::decode_not_null(nk)->class_loader_data();
-  call_do_cld(&OopClosureType::do_cld, &OopIterateClosure::do_cld, closure, cld);
-}
-
 // Implementation of the non-virtual do_derived_oop dispatch.
 
 template <typename Receiver, typename Base, typename DerivedOopClosureType>

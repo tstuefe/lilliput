@@ -211,7 +211,10 @@ ALWAYSINLINE void InstanceKlass::oop_oop_iterate_bounded(oop obj, OopClosureType
 template <typename T, class OopClosureType>
 ALWAYSINLINE void InstanceKlass::oop_oop_iterate(oop obj, OopClosureType* closure, KlassLUTEntry klute, narrowKlass nk) {
   if (Devirtualizer::do_metadata(closure)) {
-    Devirtualizer::do_klute(closure, nk, klute);
+    const unsigned perma_cld_index = klute.loader_index();
+    ClassLoaderData* const cld = perma_cld_index > 0 ? KlassInfoLUT::get_perma_cld(perma_cld_index) :
+        CompressedKlassPointers::decode_not_null(nk)->class_loader_data();
+    Devirtualizer::do_cld(closure, cld);
   }
 
   if (klute.ik_carries_infos()) {
@@ -257,7 +260,10 @@ template <typename T, class OopClosureType>
 ALWAYSINLINE void InstanceKlass::oop_oop_iterate_bounded(oop obj, OopClosureType* closure, MemRegion mr, KlassLUTEntry klute, narrowKlass nk) {
   if (Devirtualizer::do_metadata(closure)) {
     if (mr.contains(obj)) {
-      Devirtualizer::do_klute(closure, nk, klute);
+      const unsigned perma_cld_index = klute.loader_index();
+      ClassLoaderData* const cld = perma_cld_index > 0 ? KlassInfoLUT::get_perma_cld(perma_cld_index) :
+          CompressedKlassPointers::decode_not_null(nk)->class_loader_data();
+      Devirtualizer::do_cld(closure, cld);
     }
   }
 

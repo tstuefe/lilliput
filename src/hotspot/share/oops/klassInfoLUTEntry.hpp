@@ -38,19 +38,23 @@ class outputStream;
 //
 // invalid_entry (debug zap):             1111 1111 1111 1111 1111 1111 1111 1111  (relies on kind == 0b111 == 7 being invalid)
 //
-// All valid entries:                     KKKB .... .... .... .... .... .... ....
+// All valid entries:                     KKKL L... .... .... .... .... .... ....
 //
-// InstanceKlass:                         KKKB SSSS SSSS SSSS oooo oooo cccc cccc
-// InstanceKlass, has_no_addinfo:         KKKB 0000 0000 0000 0000 0000 0000 0000  (all IK specific bits 0) (note: means that "0" is a valid IK entry with no add. info)
-// InstanceKlass, has no oopmap entries:  KKK. .... .... .... .... .... 0000 0000  (omb count bits are 0)   (only valid if !has_no_addinfo)
+// InstanceKlass:                         KKKL LSSS SSSS SSSS oooo oooo cccc cccc
+// InstanceKlass, has_no_addinfo:         KKKL L000 0000 0000 0000 0000 0000 0000  (all IK specific bits 0) (note: means that "0" is a valid IK entry with no add. info)
+// InstanceKlass, has no oopmap entries:  KKKL L... .... .... .... .... 0000 0000  (omb count bits are 0)   (only valid if !has_no_addinfo)
 //
-// ArrayKlass:                            KKKB ---- hhhh hhhh tttt tttt eeee eeee
+// ArrayKlass:                            KKKL L--- hhhh hhhh tttt tttt eeee eeee
 //                                                  |                           |
 //                                                  |____lower 24 bit of lh_____|
 //
 // Legend
 // K : klass kind (3 bits)
-// B : klass loaded by boot loader (1 bit)
+// L : Loader:
+//              00 : unknown
+//              01 : boot loader
+//              10 : system loader
+//              11 : platform loader
 // S : size in words (13 bits)
 // c : count of first oopmap entry (8 bits)
 // o : offset of first oopmap entry, in bytes (8 bits)
@@ -85,15 +89,15 @@ class KlassLUTEntry {
 
   // All valid entries:  KKKB ---- ---- ---- ---- ---- ---- ----
   static constexpr int bits_kind       = 3;
-  static constexpr int bits_bootloaded = 1;
-  static constexpr int bits_common     = bits_kind + bits_bootloaded;
+  static constexpr int bits_loader     = 2;
+  static constexpr int bits_common     = bits_kind + bits_loader;
   static constexpr int bits_specific   = bits_total - bits_common;
 
   // Bits valid for all entries, regardless of Klass kind
   struct KE {
     // lsb
     unsigned kind_specific_bits : bits_specific;
-    unsigned bootloaded         : bits_bootloaded;
+    unsigned loader             : bits_loader;
     unsigned kind               : bits_kind;
     // msb
   };
@@ -179,8 +183,8 @@ public:
 
   inline unsigned kind() const { return _v.common.kind; }
 
-  // true if loaded by boot loader
-  inline bool bootloaded() const { return _v.common.bootloaded; }
+  // returns loader index (0 for unknown)
+  inline int loader_index() const { return _v.common.loader; }
 
   bool is_array() const     { return _v.common.kind >= FirstArrayKlassKind; }
   bool is_instance() const  { return !is_array(); }

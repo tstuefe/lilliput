@@ -32,6 +32,7 @@
 #include "utilities/globalDefinitions.hpp"
 
 class Klass;
+class ClassLoaderData;
 
 #ifdef ASSERT
 #define KLUT_ENABLE_EXPENSIVE_STATS
@@ -40,6 +41,7 @@ class Klass;
 
 class KlassInfoLUT : public AllStatic {
 
+  static ClassLoaderData* _common_loaders[4]; // See "loader" bits in Klute
   static uint32_t* _entries;
 
   static inline unsigned num_entries();
@@ -65,7 +67,9 @@ class KlassInfoLUT : public AllStatic {
   f(hits_ISCK)         \
   f(hits_TAK)          \
   f(hits_OAK)          \
-  f(hits_bootloaded)   \
+  f(hits_bootloader)   \
+  f(hits_sysloader)    \
+  f(hits_platformloader)   \
   f(noinfo_IMK)        \
   f(noinfo_ICLK)       \
   f(noinfo_IK_other)
@@ -87,6 +91,9 @@ public:
   static void register_klass(const Klass* k);
 
   static inline KlassLUTEntry get_entry(narrowKlass k);
+
+  static int try_register_perma_cld(ClassLoaderData* cld);
+  static inline ClassLoaderData* get_perma_cld(int index);
 
 #ifdef KLUT_ENABLE_EXPENSIVE_STATS
 
