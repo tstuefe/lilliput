@@ -170,7 +170,7 @@ uint32_t KlassLUTEntry::build_from(const Klass* k) {
     const char* not_encodable_reason = nullptr;
     value = build_from_ik(InstanceKlass::cast(k), not_encodable_reason);
     if (not_encodable_reason != nullptr) {
-      log_info(klut)("klass klute register: %s cannot be encoded because: %s.", k->name()->as_C_string(), not_encodable_reason);
+      log_debug(klut)("klass klute register: %s cannot be encoded because: %s.", k->name()->as_C_string(), not_encodable_reason);
     }
   }
   return value;

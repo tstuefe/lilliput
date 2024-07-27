@@ -24,8 +24,8 @@
  */
 
 #include "precompiled.hpp"
+#include "logging/log.hpp"
 #include "memory/allocation.hpp"
-//#include "oops/compressedKlass.inline.hpp"
 #include "oops/instanceKlass.inline.hpp"
 #include "oops/klass.hpp"
 #include "oops/klassInfoLUT.inline.hpp"
@@ -40,9 +40,22 @@ uint32_t* KlassInfoLUT::_entries = nullptr;
 void KlassInfoLUT::initialize() {
   assert(UseKLUT, "?");
   assert(CompressedKlassPointers::narrow_klass_pointer_bits() <= 22, "sanity");
-  // Note: this can be done a lot smarter, e.g. with spotwise mmap. We also should use large pages if possible.
-  // For now, this suffices.
-  _entries = NEW_C_HEAP_ARRAY(uint32_t, num_entries(), mtClass);
+  const size_t memory_needed = sizeof(uint32_t) * num_entries();
+  if (UseLargePages) {
+    const size_t large_page_size = os::large_page_size();
+    if (is_aligned(memory_needed, large_page_size)) {
+      char* memory = os::reserve_memory_special(memory_needed, large_page_size, large_page_size, nullptr, false);
+      if (memory != nullptr) {
+        _entries = (uint32_t*)memory;
+        log_info(klut)("KLUT initialized (large pages): " RANGEFMT, RANGEFMTARGS(_entries, memory_needed));
+      }
+    }
+  }
+  if (_entries == nullptr) {
+    // Fallback, just use C-heap.
+    _entries = NEW_C_HEAP_ARRAY(uint32_t, num_entries(), mtClass);
+    log_info(klut)("KLUT initialized (normal pages): " RANGEFMT, RANGEFMTARGS(_entries, memory_needed));
+  }
   for (unsigned i = 0; i < num_entries(); i++) {
     _entries[i] = KlassLUTEntry::invalid_entry;
   }
