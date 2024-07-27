@@ -40,27 +40,32 @@ class outputStream;
 //
 // All valid entries:                     KKKL L... .... .... .... .... .... ....
 //
-// InstanceKlass:                         KKKL LSSS SSSS SSSS oooo oooo cccc cccc
+// InstanceKlass:                         KKKL LSSS SSSO OOOO CCCC CCOO OOCC CCCC
+//                                                     2 2222 2222 2211 1111 1111
 // InstanceKlass, has_no_addinfo:         KKKL L000 0000 0000 0000 0000 0000 0000  (all IK specific bits 0) (note: means that "0" is a valid IK entry with no add. info)
 // InstanceKlass, has no oopmap entries:  KKKL L... .... .... .... .... 0000 0000  (omb count bits are 0)   (only valid if !has_no_addinfo)
 //
-// ArrayKlass:                            KKKL L--- hhhh hhhh tttt tttt eeee eeee
-//                                                  |                           |
-//                                                  |____lower 24 bit of lh_____|
+// ArrayKlass:                            KKKL L--- tttt tttt hhhh hhhh eeee eeee
 //
-// Legend
-// K : klass kind (3 bits)
-// L : Loader:
-//              00 : unknown
-//              01 : boot loader
-//              10 : system loader
-//              11 : platform loader
-// S : size in words (13 bits)
-// c : count of first oopmap entry (8 bits)
-// o : offset of first oopmap entry, in bytes (8 bits)
-// h : hsz byte from layouthelper    ----------\
-// t : element type byte from layouthelper      (lower 24 byte of layouthelper)
-// e : log2 esz byte from layouthelper --------/
+//
+// IK specific bits:
+// C1 : Count of first OMB                        (6 bits)
+// O1 : Offset, in number-of-oops, of first OMB   (4 bits)
+// C2 : Count of second OMB                       (6 bits)
+// O2 : Offset, in number-of-oops, of second OMB  (5 bits)
+// S  : Object instance size in words             (6 bits)
+//
+// AK specific bits:
+// e : log2 element size                          (8 bits)
+// h : header size                                (8 bits)
+// t : element basic type                         (8 bits)
+//
+// Common bits:
+// L : Loader                                     (2 bits)
+//    (0 unknown, 1 boot loader,
+//     2 system loader, 3 platform loader)
+// K : KlassKind                                  (3 bits)
+//
 // - : unused
 
 class KlassLUTEntry {
