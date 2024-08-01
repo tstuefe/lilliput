@@ -2962,6 +2962,10 @@ jint Arguments::finalize_vm_init_args(bool patch_mod_javabase) {
     warning("UseKLUT requires default object alignment.");
     FLAG_SET_DEFAULT(UseKLUT, false);
   }
+  if (UseSharedSpaces) {
+    warning("UseKLUT, for the moment, won't work with CDS enabled. Please specify -Xshare:off.");
+    FLAG_SET_DEFAULT(UseKLUT, false);
+  }
 #endif
 
   return JNI_OK;
