@@ -31,6 +31,9 @@
 //#define LOG_PLEASE
 #include "metaspaceGtestCommon.hpp"
 
+// FreeBlocks is just a wrapper around a BinList and a BlockTree. More extensive tests
+// are done in the gtests for these two sub constructs. Here, we just test basic functionality.
+
 using metaspace::FreeBlocks;
 using metaspace::MetaBlock;
 using metaspace::SizeCounter;
@@ -46,21 +49,82 @@ using metaspace::SizeCounter;
   EXPECT_EQ(fb.count(), (int)num_blocks_expected); \
 }
 
+static void add_one_block_and_test(FreeBlocks& fb, MetaBlock blk) {
+  const size_t size_0 = fb.total_size();
+  const int count_0 = fb.count();
+  fb.add_block(blk);
+  DEBUG_ONLY(fb.verify();)
+  ASSERT_FALSE(fb.is_empty());
+  CHECK_CONTENT(fb, count_0 + 1, size_0 + blk.word_size());
+}
+
+static MetaBlock remove_one_block_and_test(FreeBlocks& fb, size_t word_size) {
+  const size_t size_0 = fb.total_size();
+  const int count_0 = fb.count();
+  MetaBlock blk = fb.remove_block(word_size);
+  if (blk.is_empty()) {
+    CHECK_CONTENT(fb, count_0, size_0);
+  } else {
+    CHECK_CONTENT(fb, count_0 - 1, size_0 - blk.word_size());
+    EXPECT_GE(blk.word_size(), word_size);
+  }
+  return blk;
+}
+
 TEST_VM(metaspace, freeblocks_basics) {
 
   FreeBlocks fbl;
-  MetaWord tmp[1024];
   CHECK_CONTENT(fbl, 0, 0);
 
-  MetaBlock bl(tmp, 1024);
-  fbl.add_block(bl);
-  DEBUG_ONLY(fbl.verify();)
-  ASSERT_FALSE(fbl.is_empty());
-  CHECK_CONTENT(fbl, 1, 1024);
+  constexpr size_t tmpbufsize = 1024 * 3;
+  MetaWord tmp[tmpbufsize];
 
-  MetaBlock bl2 = fbl.remove_block(1024);
-  ASSERT_EQ(bl, bl2);
-  DEBUG_ONLY(fbl.verify();)
-  CHECK_CONTENT(fbl, 0, 0);
+  MetaWord* p = tmp;
+  MetaBlock b16  (p, 16);
+  p += b16.word_size();
+
+  MetaBlock b256 (p, 256);
+  p += b256.word_size();
+
+  MetaBlock b1024 (p, 1024);
+  p += b1024.word_size();
+  assert(p <= tmp + tmpbufsize, "increase temp buffer size");
+
+  add_one_block_and_test(fbl, b16);
+  CHECK_CONTENT(fbl, 1, 16);
+
+  MetaBlock b = remove_one_block_and_test(fbl, 256); // too large
+  ASSERT_TRUE(b.is_empty());
+
+  b = remove_one_block_and_test(fbl, 8); // smaller - will return block
+  ASSERT_EQ(b, b16);
+  CHECK_CONTENT(fbl, 0, 0); // empty now
+
+  add_one_block_and_test(fbl, b16);
+  CHECK_CONTENT(fbl, 1, 16);
+
+  add_one_block_and_test(fbl, b1024);
+  CHECK_CONTENT(fbl, 2, 16 + 1024);
+
+  add_one_block_and_test(fbl, b256);
+  CHECK_CONTENT(fbl, 3, 16 + 1024 + 256);
+
+  b = remove_one_block_and_test(fbl, 1024 + 1); // too large
+  ASSERT_TRUE(b.is_empty());
+
+  b = remove_one_block_and_test(fbl, 256); // Should return the 256 block
+  ASSERT_EQ(b, b256) << b.word_size();
+  CHECK_CONTENT(fbl, 2, 16 + 1024);
+
+  b = remove_one_block_and_test(fbl, 256); // Should return the 1024 block
+  ASSERT_EQ(b, b1024);
+  CHECK_CONTENT(fbl, 1, 16);
+
+  b = remove_one_block_and_test(fbl, 256); // Should fail
+  ASSERT_TRUE(b.is_empty());
+
+  b = remove_one_block_and_test(fbl, 8); // Should return the 16 block
+  ASSERT_EQ(b, b16);
+  CHECK_CONTENT(fbl, 0, 0); // empty now
 
 }
